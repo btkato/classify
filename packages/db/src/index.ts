@@ -8,4 +8,14 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
 }
 
-export { PrismaClient, Prisma } from '@prisma/client'
+export {
+  PrismaClient,
+  Prisma,
+  Role,
+  MembershipType,
+  MembershipStatus,
+  ClassStatus,
+  RegistrationStatus,
+  NotificationStatus,
+  TriggerEvent,
+} from '@prisma/client'
