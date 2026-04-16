@@ -25,3 +25,19 @@ export {
   NotificationStatus,
   TriggerEvent,
 } from '@prisma/client'
+
+export type {
+  User,
+  UserRole,
+  InstructorProfile,
+  Certification,
+  InstructorCertification,
+  Membership,
+  MembershipTransaction,
+  Class,
+  ClassCategory,
+  Registration,
+  Announcement,
+  NotificationJob,
+  NotificationTrigger,
+} from '@prisma/client'
