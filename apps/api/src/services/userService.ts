@@ -2,6 +2,8 @@ import { prisma } from '../lib/prisma.js'
 import { NotFoundError } from '../lib/errors.js'
 import type { Prisma } from 'db'
 
+type UserWithRoles = Prisma.UserGetPayload<{ include: { roles: true } }>
+
 interface CreateUserInput {
   clerkId: string
   email: string
@@ -19,7 +21,7 @@ interface AdminUpdateUserInput extends UpdateProfileInput {
   dateOfBirth?: Date
 }
 
-export async function createUser(input: CreateUserInput) {
+export async function createUser(input: CreateUserInput): Promise<UserWithRoles> {
   const existing = await prisma.user.findUnique({
     where: { id: input.clerkId },
     include: { roles: true },
@@ -55,7 +57,7 @@ function updateUserById(id: string, data: Prisma.UserUpdateInput) {
   })
 }
 
-export async function getUserById(id: string) {
+export async function getUserById(id: string): Promise<UserWithRoles> {
   const user = await prisma.user.findUnique({
     where: { id },
     include: { roles: true },
@@ -68,7 +70,7 @@ export async function getUserById(id: string) {
   return user
 }
 
-export async function updateProfile(id: string, data: UpdateProfileInput) {
+export async function updateProfile(id: string, data: UpdateProfileInput): Promise<UserWithRoles> {
   return updateUserById(id, {
     firstName: data.firstName,
     lastName: data.lastName,
@@ -76,7 +78,7 @@ export async function updateProfile(id: string, data: UpdateProfileInput) {
   })
 }
 
-export async function adminUpdateUser(id: string, data: AdminUpdateUserInput) {
+export async function adminUpdateUser(id: string, data: AdminUpdateUserInput): Promise<UserWithRoles> {
   return updateUserById(id, {
     firstName: data.firstName,
     lastName: data.lastName,
