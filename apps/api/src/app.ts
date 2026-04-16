@@ -4,6 +4,7 @@ import { errorHandler } from './middleware/errorHandler.js'
 import { usersRouter } from './routes/users.js'
 import { webhooksRouter } from './routes/webhooks.js'
 import { adminRouter } from './routes/admin.js'
+import { classCategoriesRouter } from './routes/classCategories.js'
 
 export const app = express()
 
@@ -19,5 +20,6 @@ app.get('/health', (_req, res) => {
 
 app.use('/users', usersRouter)
 app.use('/admin', adminRouter)
+app.use('/class-categories', classCategoriesRouter)
 
 app.use(errorHandler)
