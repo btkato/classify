@@ -1,8 +1,10 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
 
-const prisma = new PrismaClient()
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
+const prisma = new PrismaClient({ adapter })
 
-type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+type TransactionClient = Prisma.TransactionClient
 
 const admins = [
   { clerkId: 'user_seed_admin_1', email: 'admin1@classify.dev', firstName: 'Alice', lastName: 'Admin' },
@@ -37,7 +39,7 @@ async function seedUser(
 ) {
   return transaction.user.upsert({
     where: { id: clerkId },
-    create: { id: clerkId, email, firstName, lastName, passwordHash: 'clerk_managed' },
+    create: { id: clerkId, email, firstName, lastName },
     update: {},
   })
 }

@@ -33,7 +33,6 @@ export async function createUser(input: CreateUserInput) {
         email: input.email,
         firstName: input.firstName,
         lastName: input.lastName,
-        passwordHash: 'clerk_managed',
       },
     })
 

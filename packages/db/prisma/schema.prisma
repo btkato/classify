@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -63,10 +62,9 @@ enum TriggerEvent {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  passwordHash String
-  firstName    String
+  id          String    @id @default(uuid())
+  email       String    @unique
+  firstName   String
   lastName     String
   dateOfBirth  DateTime?
   phone        String?
