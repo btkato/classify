@@ -34,6 +34,10 @@ export function errorHandler(
       res.status(404).json({ error: { message: 'Resource not found' } })
       return
     }
+    if (err.code === 'P2002') {
+      res.status(409).json({ error: { message: 'A record with that value already exists' } })
+      return
+    }
   }
 
   if (err instanceof Error) {
