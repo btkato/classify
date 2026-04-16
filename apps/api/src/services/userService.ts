@@ -2,6 +2,13 @@ import { prisma } from '../lib/prisma.js'
 import { NotFoundError } from '../lib/errors.js'
 import type { Prisma } from 'db'
 
+interface CreateUserInput {
+  clerkId: string
+  email: string
+  firstName: string
+  lastName: string
+}
+
 interface UpdateProfileInput {
   firstName?: string
   lastName?: string
@@ -10,6 +17,35 @@ interface UpdateProfileInput {
 
 interface AdminUpdateUserInput extends UpdateProfileInput {
   dateOfBirth?: Date
+}
+
+export async function createUser(input: CreateUserInput) {
+  const existing = await prisma.user.findUnique({
+    where: { id: input.clerkId },
+    include: { roles: true },
+  })
+  if (existing) return existing
+
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        id: input.clerkId,
+        email: input.email,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        passwordHash: 'clerk_managed',
+      },
+    })
+
+    await tx.userRole.create({
+      data: { userId: user.id, role: 'STUDENT' },
+    })
+
+    return tx.user.findUniqueOrThrow({
+      where: { id: user.id },
+      include: { roles: true },
+    })
+  })
 }
 
 function updateUserById(id: string, data: Prisma.UserUpdateInput) {
