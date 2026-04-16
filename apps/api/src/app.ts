@@ -3,6 +3,7 @@ import { clerkMiddleware } from '@clerk/express'
 import { errorHandler } from './middleware/errorHandler.js'
 import { usersRouter } from './routes/users.js'
 import { webhooksRouter } from './routes/webhooks.js'
+import { adminRouter } from './routes/admin.js'
 
 export const app = express()
 
@@ -17,5 +18,6 @@ app.get('/health', (_req, res) => {
 })
 
 app.use('/users', usersRouter)
+app.use('/admin', adminRouter)
 
 app.use(errorHandler)
