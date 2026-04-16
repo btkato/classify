@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js'
+import { NotFoundError } from '../lib/errors.js'
 import type { Prisma } from 'db'
 
 interface UpdateProfileInput {
@@ -26,7 +27,7 @@ export async function getUserById(id: string) {
   })
 
   if (!user) {
-    throw new Error('User not found')
+    throw new NotFoundError('User not found')
   }
 
   return user

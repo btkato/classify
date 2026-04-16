@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getUserById, updateProfile, adminUpdateUser } from './userService.js'
+import { NotFoundError } from '../lib/errors.js'
 
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
@@ -44,7 +45,7 @@ describe('getUserById', () => {
   it('throws when user is not found', async () => {
     mockFindUnique.mockResolvedValue(null as never)
 
-    await expect(getUserById('user_123')).rejects.toThrow('User not found')
+    await expect(getUserById('user_123')).rejects.toThrow(NotFoundError)
   })
 })
 

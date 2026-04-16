@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import { ZodError } from 'zod'
 import { Prisma } from 'db'
+import { NotFoundError } from '../lib/errors.js'
 
 export function errorHandler(
   err: unknown,
@@ -20,6 +21,11 @@ export function errorHandler(
         })),
       },
     })
+    return
+  }
+
+  if (err instanceof NotFoundError) {
+    res.status(404).json({ error: { message: err.message } })
     return
   }
 
