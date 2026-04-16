@@ -5,6 +5,9 @@
   "scripts": {
     "test": "echo \"No tests in db package\""
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
