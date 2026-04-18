@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { ZodError, ZodIssueCode } from 'zod'
 import { Prisma } from 'db'
 import { errorHandler } from './errorHandler.js'
-import { NotFoundError } from '../lib/errors.js'
+import { NotFoundError, ValidationError } from '../lib/errors.js'
 
 function makeRes() {
   return {
@@ -49,6 +49,16 @@ describe('errorHandler middleware', () => {
 
     expect(res.status).toHaveBeenCalledWith(404)
     expect(res.json).toHaveBeenCalledWith({ error: { message: 'Category not found' } })
+  })
+
+  it('returns 400 when a ValidationError is thrown', () => {
+    const err = new ValidationError('Class must start in the future')
+    const res = makeRes()
+
+    errorHandler(err, req, res, next)
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith({ error: { message: 'Class must start in the future' } })
   })
 
   it('returns 404 when a Prisma P2025 error is thrown', () => {
