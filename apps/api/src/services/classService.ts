@@ -150,6 +150,7 @@ export async function createClass(input: CreateClassInput): Promise<Class> {
       durationMinutes: input.durationMinutes,
       location: input.location,
       recurringGroupId: input.recurringGroupId,
+      status: 'ACTIVE',
     },
   })
 }
