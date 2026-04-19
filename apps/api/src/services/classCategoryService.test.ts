@@ -21,7 +21,7 @@ beforeEach(() => {
 describe('createCategory', () => {
   it('calls prisma.classCategory.create with the given name and returns the result', async () => {
     const category = { id: 'cat_1', name: 'Yoga', createdAt: new Date() }
-    mockCreate.mockResolvedValue(category)
+    mockCreate.mockResolvedValue(category as never)
 
     const result = await createCategory('Yoga')
 
@@ -36,7 +36,7 @@ describe('listCategories', () => {
       { id: 'cat_1', name: 'Pilates', createdAt: new Date() },
       { id: 'cat_2', name: 'Yoga', createdAt: new Date() },
     ]
-    mockFindMany.mockResolvedValue(categories)
+    mockFindMany.mockResolvedValue(categories as never)
 
     const result = await listCategories()
 
