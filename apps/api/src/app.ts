@@ -6,6 +6,7 @@ import { webhooksRouter } from './routes/webhooks.js'
 import { adminRouter } from './routes/admin.js'
 import { classCategoriesRouter } from './routes/classCategories.js'
 import { classesRouter } from './routes/classes.js'
+import { membershipsRouter } from './routes/memberships.js'
 
 export const app = express()
 
@@ -23,5 +24,6 @@ app.use('/users', usersRouter)
 app.use('/admin', adminRouter)
 app.use('/class-categories', classCategoriesRouter)
 app.use('/classes', classesRouter)
+app.use('/memberships', membershipsRouter)
 
 app.use(errorHandler)
