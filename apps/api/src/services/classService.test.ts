@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prisma } from '../lib/prisma.js'
-import { createClass, listClasses, getClass } from './classService.js'
+import { createClass, listClasses, getClass, updateClass } from './classService.js'
+import { ForbiddenError, NotFoundError } from '../lib/errors.js'
 
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
@@ -8,6 +9,7 @@ vi.mock('../lib/prisma.js', () => ({
       create: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      update: vi.fn(),
     },
   },
 }))
@@ -15,6 +17,7 @@ vi.mock('../lib/prisma.js', () => ({
 const mockCreate = vi.mocked(prisma.class.create)
 const mockFindMany = vi.mocked(prisma.class.findMany)
 const mockFindUnique = vi.mocked(prisma.class.findUnique)
+const mockUpdate = vi.mocked(prisma.class.update)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -175,5 +178,76 @@ describe('getClass', () => {
     await expect(getClass('nonexistent')).rejects.toThrow('Class not found')
 
     expect(mockFindUnique).toHaveBeenCalledWith({ where: { id: 'nonexistent' } })
+  })
+})
+
+describe('updateClass', () => {
+  const existingClass = {
+    id: 'class_1',
+    instructorId: 'user_1',
+    title: 'Morning Yoga',
+    capacity: 10,
+    startsAt: futureDate,
+    durationMinutes: 60,
+    status: 'ACTIVE',
+    categoryId: 'cat_1',
+    description: null,
+    location: null,
+    recurringGroupId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  beforeEach(() => {
+    mockFindUnique.mockResolvedValue(existingClass as never)
+  })
+
+  it('calls prisma.class.update with the given fields and returns the result', async () => {
+    const updatedClass = { ...existingClass, title: 'Evening Yoga' }
+    mockUpdate.mockResolvedValue(updatedClass as never)
+
+    const result = await updateClass('class_1', { title: 'Evening Yoga' }, 'user_1', false)
+
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: 'class_1' },
+      data: { title: 'Evening Yoga' },
+    })
+    expect(result).toEqual(updatedClass)
+  })
+
+  it('throws NotFoundError when the class does not exist', async () => {
+    mockFindUnique.mockResolvedValue(null)
+
+    await expect(updateClass('nonexistent', { title: 'New Title' }, 'user_1', false)).rejects.toThrow(NotFoundError)
+  })
+
+  it('throws ForbiddenError when requester is not the owner and not admin', async () => {
+    await expect(updateClass('class_1', { title: 'New Title' }, 'other_user', false)).rejects.toThrow(ForbiddenError)
+
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('allows update when requester is not the owner but is admin', async () => {
+    mockUpdate.mockResolvedValue(existingClass as never)
+
+    await expect(updateClass('class_1', { title: 'New Title' }, 'other_user', true)).resolves.not.toThrow()
+
+    expect(mockUpdate).toHaveBeenCalled()
+  })
+
+  it('throws ValidationError when startsAt is in the past', async () => {
+    const pastDate = new Date(Date.now() - 1000 * 60 * 60)
+
+    await expect(updateClass('class_1', { startsAt: pastDate }, 'user_1', false)).rejects.toThrow('Class must start in the future')
+
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('does not validate startsAt when it is not provided', async () => {
+    mockUpdate.mockResolvedValue(existingClass as never)
+
+    await expect(updateClass('class_1', { title: 'New Title' }, 'user_1', false)).resolves.not.toThrow()
+
+    expect(mockUpdate).toHaveBeenCalled()
   })
 })

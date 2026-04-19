@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma.js'
-import { NotFoundError, ValidationError } from '../lib/errors.js'
+import { NotFoundError, ValidationError, ForbiddenError } from '../lib/errors.js'
 import type { Class } from 'db'
 
 interface ListClassesInput {
@@ -42,6 +42,42 @@ export async function getClass(id: string): Promise<Class> {
   }
 
   return foundClass
+}
+
+interface UpdateClassInput {
+  title?: string
+  description?: string
+  capacity?: number
+  startsAt?: Date
+  durationMinutes?: number
+  location?: string
+  recurringGroupId?: string
+}
+
+export async function updateClass(
+  id: string,
+  input: UpdateClassInput,
+  requesterId: string,
+  isAdmin: boolean
+): Promise<Class> {
+  const existingClass = await prisma.class.findUnique({ where: { id } })
+
+  if (!existingClass) {
+    throw new NotFoundError('Class not found')
+  }
+
+  if (existingClass.instructorId !== requesterId && !isAdmin) {
+    throw new ForbiddenError('You do not have permission to update this class')
+  }
+
+  if (input.startsAt !== undefined && input.startsAt <= new Date()) {
+    throw new ValidationError('Class must start in the future')
+  }
+
+  return prisma.class.update({
+    where: { id },
+    data: input,
+  })
 }
 
 export async function createClass(input: CreateClassInput): Promise<Class> {
