@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Request, Response, NextFunction } from 'express'
-import { ValidationError } from '../lib/errors.js'
+import { ValidationError, NotFoundError } from '../lib/errors.js'
 
 vi.mock('@clerk/express', () => ({
   clerkMiddleware: () => (_req: Request, _res: Response, next: NextFunction) => next(),
@@ -19,6 +19,7 @@ vi.mock('../lib/prisma.js', () => ({
 vi.mock('../services/classService.js', () => ({
   createClass: vi.fn(),
   listClasses: vi.fn(),
+  getClass: vi.fn(),
 }))
 
 import { app } from '../app.js'
@@ -30,6 +31,7 @@ const mockGetAuth = vi.mocked(getAuth)
 const mockFindMany = vi.mocked(prisma.userRole.findMany)
 const mockCreateClass = vi.mocked(classService.createClass)
 const mockListClasses = vi.mocked(classService.listClasses)
+const mockGetClass = vi.mocked(classService.getClass)
 
 const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
 
@@ -224,6 +226,35 @@ describe('GET /classes', () => {
     mockListClasses.mockResolvedValue([])
 
     const res = await request(app).get('/classes')
+
+    expect(res.status).toBe(200)
+  })
+})
+
+describe('GET /classes/:id', () => {
+  it('returns 200 with the class when found', async () => {
+    mockGetClass.mockResolvedValue(createdClass as never)
+
+    const res = await request(app).get('/classes/class_1')
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ id: 'class_1', title: 'Morning Yoga' })
+  })
+
+  it('returns 404 when the class does not exist', async () => {
+    mockGetClass.mockRejectedValue(new NotFoundError('Class not found'))
+
+    const res = await request(app).get('/classes/nonexistent')
+
+    expect(res.status).toBe(404)
+    expect(res.body).toMatchObject({ error: { message: 'Class not found' } })
+  })
+
+  it('does not require authentication', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+    mockGetClass.mockResolvedValue(createdClass as never)
+
+    const res = await request(app).get('/classes/class_1')
 
     expect(res.status).toBe(200)
   })
