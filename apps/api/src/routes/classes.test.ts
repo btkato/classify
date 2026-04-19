@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Request, Response, NextFunction } from 'express'
-import { ValidationError, NotFoundError } from '../lib/errors.js'
+import { ValidationError, NotFoundError, ForbiddenError } from '../lib/errors.js'
 
 vi.mock('@clerk/express', () => ({
   clerkMiddleware: () => (_req: Request, _res: Response, next: NextFunction) => next(),
@@ -20,6 +20,7 @@ vi.mock('../services/classService.js', () => ({
   createClass: vi.fn(),
   listClasses: vi.fn(),
   getClass: vi.fn(),
+  updateClass: vi.fn(),
 }))
 
 import { app } from '../app.js'
@@ -32,6 +33,7 @@ const mockFindMany = vi.mocked(prisma.userRole.findMany)
 const mockCreateClass = vi.mocked(classService.createClass)
 const mockListClasses = vi.mocked(classService.listClasses)
 const mockGetClass = vi.mocked(classService.getClass)
+const mockUpdateClass = vi.mocked(classService.updateClass)
 
 const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
 
@@ -257,5 +259,103 @@ describe('GET /classes/:id', () => {
     const res = await request(app).get('/classes/class_1')
 
     expect(res.status).toBe(200)
+  })
+})
+
+describe('PATCH /classes/:id', () => {
+  const validPatchBody = { title: 'Evening Yoga' }
+
+  describe('authentication and authorisation', () => {
+    it('returns 401 when not authenticated', async () => {
+      mockGetAuth.mockReturnValue({ userId: null } as never)
+
+      const res = await request(app).patch('/classes/class_1').send(validPatchBody)
+
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 403 when authenticated as STUDENT', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'STUDENT' }] as never)
+
+      const res = await request(app).patch('/classes/class_1').send(validPatchBody)
+
+      expect(res.status).toBe(403)
+    })
+
+    it('returns 200 when authenticated as INSTRUCTOR', async () => {
+      mockUpdateClass.mockResolvedValue({ ...createdClass, title: 'Evening Yoga' } as never)
+
+      const res = await request(app).patch('/classes/class_1').send(validPatchBody)
+
+      expect(res.status).toBe(200)
+    })
+
+    it('returns 200 when authenticated as ADMIN', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
+      mockUpdateClass.mockResolvedValue({ ...createdClass, title: 'Evening Yoga' } as never)
+
+      const res = await request(app).patch('/classes/class_1').send(validPatchBody)
+
+      expect(res.status).toBe(200)
+    })
+  })
+
+  describe('isAdmin flag', () => {
+    it('calls updateClass with isAdmin false when user is INSTRUCTOR', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'INSTRUCTOR' }] as never)
+      mockUpdateClass.mockResolvedValue(createdClass as never)
+
+      await request(app).patch('/classes/class_1').send(validPatchBody)
+
+      expect(mockUpdateClass).toHaveBeenCalledWith(
+        'class_1',
+        expect.any(Object),
+        'user_1',
+        false
+      )
+    })
+
+    it('calls updateClass with isAdmin true when user is ADMIN', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
+      mockUpdateClass.mockResolvedValue(createdClass as never)
+
+      await request(app).patch('/classes/class_1').send(validPatchBody)
+
+      expect(mockUpdateClass).toHaveBeenCalledWith(
+        'class_1',
+        expect.any(Object),
+        'user_1',
+        true
+      )
+    })
+  })
+
+  describe('error handling', () => {
+    it('returns 404 when service throws NotFoundError', async () => {
+      mockUpdateClass.mockRejectedValue(new NotFoundError('Class not found'))
+
+      const res = await request(app).patch('/classes/class_1').send(validPatchBody)
+
+      expect(res.status).toBe(404)
+      expect(res.body).toMatchObject({ error: { message: 'Class not found' } })
+    })
+
+    it('returns 403 when service throws ForbiddenError', async () => {
+      mockUpdateClass.mockRejectedValue(new ForbiddenError('You do not have permission to update this class'))
+
+      const res = await request(app).patch('/classes/class_1').send(validPatchBody)
+
+      expect(res.status).toBe(403)
+      expect(res.body).toMatchObject({ error: { message: 'You do not have permission to update this class' } })
+    })
+
+    it('returns 400 when service throws ValidationError', async () => {
+      mockUpdateClass.mockRejectedValue(new ValidationError('Class must start in the future'))
+
+      const res = await request(app).patch('/classes/class_1').send(validPatchBody)
+
+      expect(res.status).toBe(400)
+      expect(res.body).toMatchObject({ error: { message: 'Class must start in the future' } })
+    })
   })
 })
