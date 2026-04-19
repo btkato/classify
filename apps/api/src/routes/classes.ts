@@ -4,7 +4,6 @@ import { requireAuth } from '../middleware/requireAuth.js'
 import { requireRoles } from '../middleware/requireRoles.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import { createClass, listClasses, getClass, updateClass } from '../services/classService.js'
-import { prisma } from '../lib/prisma.js'
 
 export const classesRouter = express.Router()
 
@@ -73,8 +72,7 @@ classesRouter.patch(
       return
     }
 
-    const roles = await prisma.userRole.findMany({ where: { userId } })
-    const isAdmin = roles.some((role) => role.role === 'ADMIN')
+    const isAdmin = (req.userRoles ?? []).some((role) => role.role === 'ADMIN')
 
     const updatedClass = await updateClass(id, body, userId, isAdmin)
     res.status(200).json(updatedClass)

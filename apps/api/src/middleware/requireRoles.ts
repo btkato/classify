@@ -21,6 +21,7 @@ export function requireRoles(allowedRoles: Role[]): RequestHandler {
       return
     }
 
+    req.userRoles = userRoles
     next()
   }
 }
