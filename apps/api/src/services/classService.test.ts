@@ -1,18 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prisma } from '../lib/prisma.js'
-import { createClass, listClasses } from './classService.js'
+import { createClass, listClasses, getClass } from './classService.js'
 
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
     class: {
       create: vi.fn(),
       findMany: vi.fn(),
+      findUnique: vi.fn(),
     },
   },
 }))
 
 const mockCreate = vi.mocked(prisma.class.create)
 const mockFindMany = vi.mocked(prisma.class.findMany)
+const mockFindUnique = vi.mocked(prisma.class.findUnique)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -153,5 +155,25 @@ describe('listClasses', () => {
     const result = await listClasses({})
 
     expect(result).toEqual(classes)
+  })
+})
+
+describe('getClass', () => {
+  it('returns the class when found', async () => {
+    const foundClass = { id: 'class_1', title: 'Morning Yoga' }
+    mockFindUnique.mockResolvedValue(foundClass as never)
+
+    const result = await getClass('class_1')
+
+    expect(mockFindUnique).toHaveBeenCalledWith({ where: { id: 'class_1' } })
+    expect(result).toEqual(foundClass)
+  })
+
+  it('throws NotFoundError when the class does not exist', async () => {
+    mockFindUnique.mockResolvedValue(null)
+
+    await expect(getClass('nonexistent')).rejects.toThrow('Class not found')
+
+    expect(mockFindUnique).toHaveBeenCalledWith({ where: { id: 'nonexistent' } })
   })
 })

@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma.js'
-import { ValidationError } from '../lib/errors.js'
+import { NotFoundError, ValidationError } from '../lib/errors.js'
 import type { Class } from 'db'
 
 interface ListClassesInput {
@@ -32,6 +32,16 @@ export async function listClasses(input: ListClassesInput): Promise<Class[]> {
     },
     orderBy: { startsAt: 'asc' },
   })
+}
+
+export async function getClass(id: string): Promise<Class> {
+  const foundClass = await prisma.class.findUnique({ where: { id } })
+
+  if (!foundClass) {
+    throw new NotFoundError('Class not found')
+  }
+
+  return foundClass
 }
 
 export async function createClass(input: CreateClassInput): Promise<Class> {
