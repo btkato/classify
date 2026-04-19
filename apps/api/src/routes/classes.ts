@@ -3,9 +3,15 @@ import { z } from 'zod'
 import { requireAuth } from '../middleware/requireAuth.js'
 import { requireRoles } from '../middleware/requireRoles.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
-import { createClass } from '../services/classService.js'
+import { createClass, listClasses } from '../services/classService.js'
 
 export const classesRouter = express.Router()
+
+const listClassesQuerySchema = z.object({
+  categoryId: z.string().min(1).optional(),
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+})
 
 const createClassBodySchema = z.object({
   categoryId: z.string().min(1),
@@ -17,6 +23,19 @@ const createClassBodySchema = z.object({
   location: z.string().min(1).optional(),
   recurringGroupId: z.string().min(1).optional(),
 })
+
+classesRouter.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const query = listClassesQuerySchema.parse(req.query)
+    const classes = await listClasses({
+      categoryId: query.categoryId,
+      from: query.from,
+      to: query.to,
+    })
+    res.status(200).json(classes)
+  })
+)
 
 classesRouter.post(
   '/',
