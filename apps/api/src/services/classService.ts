@@ -1,6 +1,8 @@
 import { prisma } from '../lib/prisma.js'
 import { NotFoundError, ValidationError, ForbiddenError } from '../lib/errors.js'
-import type { Class } from 'db'
+import type { Class, Prisma } from 'db'
+
+type RegistrationWithUser = Prisma.RegistrationGetPayload<{ include: { user: true } }>
 
 interface ListClassesInput {
   categoryId?: string
@@ -85,6 +87,31 @@ export async function cancelClass(id: string): Promise<Class> {
     where: { id },
     data: { status: 'CANCELLED' },
   })
+}
+
+export async function getRoster(
+  classId: string,
+  requesterId: string,
+  isAdmin: boolean
+): Promise<RegistrationWithUser[]> {
+  const foundClass = await prisma.class.findUnique({
+    where: { id: classId },
+    include: {
+      registrations: {
+        include: { user: true },
+      },
+    },
+  })
+
+  if (!foundClass) {
+    throw new NotFoundError('Class not found')
+  }
+
+  if (foundClass.instructorId !== requesterId && !isAdmin) {
+    throw new ForbiddenError('You do not have permission to view this roster')
+  }
+
+  return foundClass.registrations
 }
 
 export async function createClass(input: CreateClassInput): Promise<Class> {

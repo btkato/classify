@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prisma } from '../lib/prisma.js'
-import { createClass, listClasses, getClass, updateClass, cancelClass } from './classService.js'
+import { createClass, listClasses, getClass, updateClass, cancelClass, getRoster } from './classService.js'
 import { ForbiddenError, NotFoundError } from '../lib/errors.js'
 
 vi.mock('../lib/prisma.js', () => ({
@@ -280,5 +280,83 @@ describe('cancelClass', () => {
       data: { status: 'CANCELLED' },
     })
     expect(result.status).toBe('CANCELLED')
+  })
+})
+
+describe('getRoster', () => {
+  const student = {
+    id: 'user_2',
+    clerkId: 'clerk_2',
+    email: 'student@example.com',
+    firstName: 'Jane',
+    lastName: 'Doe',
+    dateOfBirth: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  const registration = {
+    id: 'reg_1',
+    userId: 'user_2',
+    classId: 'class_1',
+    membershipId: null,
+    status: 'ENROLLED',
+    waitlistPosition: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    user: student,
+  }
+
+  const classWithRoster = {
+    id: 'class_1',
+    instructorId: 'user_1',
+    title: 'Morning Yoga',
+    status: 'ACTIVE',
+    categoryId: 'cat_1',
+    capacity: 10,
+    startsAt: futureDate,
+    durationMinutes: 60,
+    description: null,
+    location: null,
+    recurringGroupId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    registrations: [registration],
+  }
+
+  it('returns the registrations with user data when requester is the instructor', async () => {
+    mockFindUnique.mockResolvedValue(classWithRoster as never)
+
+    const result = await getRoster('class_1', 'user_1', false)
+
+    expect(mockFindUnique).toHaveBeenCalledWith({
+      where: { id: 'class_1' },
+      include: {
+        registrations: {
+          include: { user: true },
+        },
+      },
+    })
+    expect(result).toEqual([registration])
+  })
+
+  it('returns the registrations when requester is an admin', async () => {
+    mockFindUnique.mockResolvedValue(classWithRoster as never)
+
+    const result = await getRoster('class_1', 'other_user', true)
+
+    expect(result).toEqual([registration])
+  })
+
+  it('throws NotFoundError when the class does not exist', async () => {
+    mockFindUnique.mockResolvedValue(null)
+
+    await expect(getRoster('nonexistent', 'user_1', false)).rejects.toThrow(NotFoundError)
+  })
+
+  it('throws ForbiddenError when requester is not the instructor and not admin', async () => {
+    mockFindUnique.mockResolvedValue(classWithRoster as never)
+
+    await expect(getRoster('class_1', 'other_user', false)).rejects.toThrow(ForbiddenError)
   })
 })
