@@ -7,11 +7,16 @@ import { createClass, listClasses, getClass, updateClass, cancelClass, getRoster
 
 export const classesRouter = express.Router()
 
-const listClassesQuerySchema = z.object({
-  categoryId: z.string().min(1).optional(),
-  from: z.coerce.date().optional(),
-  to: z.coerce.date().optional(),
-})
+const listClassesQuerySchema = z
+  .object({
+    categoryId: z.string().min(1).optional(),
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
+  })
+  .refine((query) => !query.from || !query.to || query.from <= query.to, {
+    path: ['to'],
+    message: '`to` must be greater than or equal to `from`',
+  })
 
 const updateClassBodySchema = z.object({
   title: z.string().min(1).optional(),
