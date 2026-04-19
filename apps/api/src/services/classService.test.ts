@@ -61,6 +61,7 @@ describe('createClass', () => {
         durationMinutes: validInput.durationMinutes,
         location: undefined,
         recurringGroupId: undefined,
+        status: 'ACTIVE',
       },
     })
     expect(result).toEqual(createdClass)
