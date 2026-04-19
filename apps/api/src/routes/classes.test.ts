@@ -18,6 +18,7 @@ vi.mock('../lib/prisma.js', () => ({
 
 vi.mock('../services/classService.js', () => ({
   createClass: vi.fn(),
+  listClasses: vi.fn(),
 }))
 
 import { app } from '../app.js'
@@ -28,6 +29,7 @@ import * as classService from '../services/classService.js'
 const mockGetAuth = vi.mocked(getAuth)
 const mockFindMany = vi.mocked(prisma.userRole.findMany)
 const mockCreateClass = vi.mocked(classService.createClass)
+const mockListClasses = vi.mocked(classService.listClasses)
 
 const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
 
@@ -169,5 +171,60 @@ describe('POST /classes', () => {
       expect(res.status).toBe(400)
       expect(res.body).toMatchObject({ error: { message: 'Class must start in the future' } })
     })
+  })
+})
+
+describe('GET /classes', () => {
+  it('returns 200 with an array of classes', async () => {
+    mockListClasses.mockResolvedValue([createdClass] as never)
+
+    const res = await request(app).get('/classes')
+
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveLength(1)
+    expect(res.body[0]).toMatchObject({ id: 'class_1', title: 'Morning Yoga' })
+  })
+
+  it('returns 200 with an empty array when no classes exist', async () => {
+    mockListClasses.mockResolvedValue([])
+
+    const res = await request(app).get('/classes')
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual([])
+  })
+
+  it('passes categoryId query param to the service', async () => {
+    mockListClasses.mockResolvedValue([])
+
+    await request(app).get('/classes?categoryId=cat_1')
+
+    expect(mockListClasses).toHaveBeenCalledWith(
+      expect.objectContaining({ categoryId: 'cat_1' })
+    )
+  })
+
+  it('passes from and to query params as dates to the service', async () => {
+    mockListClasses.mockResolvedValue([])
+    const from = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
+    const to = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString()
+
+    await request(app).get(`/classes?from=${from}&to=${to}`)
+
+    expect(mockListClasses).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: new Date(from),
+        to: new Date(to),
+      })
+    )
+  })
+
+  it('does not require authentication', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+    mockListClasses.mockResolvedValue([])
+
+    const res = await request(app).get('/classes')
+
+    expect(res.status).toBe(200)
   })
 })
