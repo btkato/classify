@@ -286,13 +286,9 @@ describe('cancelClass', () => {
 describe('getRoster', () => {
   const student = {
     id: 'user_2',
-    clerkId: 'clerk_2',
     email: 'student@example.com',
     firstName: 'Jane',
     lastName: 'Doe',
-    dateOfBirth: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
   }
 
   const registration = {
@@ -333,7 +329,16 @@ describe('getRoster', () => {
       where: { id: 'class_1' },
       include: {
         registrations: {
-          include: { user: true },
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
         },
       },
     })

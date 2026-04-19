@@ -2,7 +2,18 @@ import { prisma } from '../lib/prisma.js'
 import { NotFoundError, ValidationError, ForbiddenError } from '../lib/errors.js'
 import type { Class, Prisma } from 'db'
 
-type RegistrationWithUser = Prisma.RegistrationGetPayload<{ include: { user: true } }>
+type RegistrationWithUser = Prisma.RegistrationGetPayload<{
+  include: {
+    user: {
+      select: {
+        id: true
+        firstName: true
+        lastName: true
+        email: true
+      }
+    }
+  }
+}>
 
 interface ListClassesInput {
   categoryId?: string
@@ -98,7 +109,16 @@ export async function getRoster(
     where: { id: classId },
     include: {
       registrations: {
-        include: { user: true },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
       },
     },
   })
