@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { requireAuth } from '../middleware/requireAuth.js'
 import { requireRoles } from '../middleware/requireRoles.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
-import { createClass, listClasses, getClass, updateClass } from '../services/classService.js'
+import { createClass, listClasses, getClass, updateClass, cancelClass } from '../services/classService.js'
 
 export const classesRouter = express.Router()
 
@@ -76,6 +76,17 @@ classesRouter.patch(
 
     const updatedClass = await updateClass(id, body, userId, isAdmin)
     res.status(200).json(updatedClass)
+  })
+)
+
+classesRouter.delete(
+  '/:id',
+  requireAuth,
+  requireRoles(['ADMIN']),
+  asyncHandler(async (req, res) => {
+    const { id } = classParamsSchema.parse(req.params)
+    const cancelledClass = await cancelClass(id)
+    res.status(200).json(cancelledClass)
   })
 )
 

@@ -21,6 +21,7 @@ vi.mock('../services/classService.js', () => ({
   listClasses: vi.fn(),
   getClass: vi.fn(),
   updateClass: vi.fn(),
+  cancelClass: vi.fn(),
 }))
 
 import { app } from '../app.js'
@@ -34,6 +35,7 @@ const mockCreateClass = vi.mocked(classService.createClass)
 const mockListClasses = vi.mocked(classService.listClasses)
 const mockGetClass = vi.mocked(classService.getClass)
 const mockUpdateClass = vi.mocked(classService.updateClass)
+const mockCancelClass = vi.mocked(classService.cancelClass)
 
 const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
 
@@ -356,6 +358,69 @@ describe('PATCH /classes/:id', () => {
 
       expect(res.status).toBe(400)
       expect(res.body).toMatchObject({ error: { message: 'Class must start in the future' } })
+    })
+  })
+})
+
+describe('DELETE /classes/:id', () => {
+  const cancelledClass = { ...createdClass, status: 'CANCELLED' }
+
+  describe('authentication and authorisation', () => {
+    it('returns 401 when not authenticated', async () => {
+      mockGetAuth.mockReturnValue({ userId: null } as never)
+
+      const res = await request(app).delete('/classes/class_1')
+
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 403 when authenticated as INSTRUCTOR', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'INSTRUCTOR' }] as never)
+
+      const res = await request(app).delete('/classes/class_1')
+
+      expect(res.status).toBe(403)
+    })
+
+    it('returns 403 when authenticated as STUDENT', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'STUDENT' }] as never)
+
+      const res = await request(app).delete('/classes/class_1')
+
+      expect(res.status).toBe(403)
+    })
+
+    it('returns 200 when authenticated as ADMIN', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
+      mockCancelClass.mockResolvedValue(cancelledClass as never)
+
+      const res = await request(app).delete('/classes/class_1')
+
+      expect(res.status).toBe(200)
+    })
+  })
+
+  describe('success', () => {
+    it('calls cancelClass with the id and returns the cancelled class', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
+      mockCancelClass.mockResolvedValue(cancelledClass as never)
+
+      const res = await request(app).delete('/classes/class_1')
+
+      expect(mockCancelClass).toHaveBeenCalledWith('class_1')
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ id: 'class_1', status: 'CANCELLED' })
+    })
+  })
+
+  describe('error handling', () => {
+    it('returns 404 when service throws NotFoundError', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
+      mockCancelClass.mockRejectedValue(new NotFoundError('Class not found'))
+
+      const res = await request(app).delete('/classes/class_1')
+
+      expect(res.status).toBe(404)
     })
   })
 })
