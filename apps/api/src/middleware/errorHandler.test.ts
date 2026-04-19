@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { ZodError, ZodIssueCode } from 'zod'
 import { Prisma } from 'db'
 import { errorHandler } from './errorHandler.js'
-import { NotFoundError, ValidationError } from '../lib/errors.js'
+import { NotFoundError, ValidationError, ForbiddenError } from '../lib/errors.js'
 
 function makeRes() {
   return {
@@ -59,6 +59,16 @@ describe('errorHandler middleware', () => {
 
     expect(res.status).toHaveBeenCalledWith(400)
     expect(res.json).toHaveBeenCalledWith({ error: { message: 'Class must start in the future' } })
+  })
+
+  it('returns 403 when a ForbiddenError is thrown', () => {
+    const err = new ForbiddenError('You do not have permission to update this class')
+    const res = makeRes()
+
+    errorHandler(err, req, res, next)
+
+    expect(res.status).toHaveBeenCalledWith(403)
+    expect(res.json).toHaveBeenCalledWith({ error: { message: 'You do not have permission to update this class' } })
   })
 
   it('returns 404 when a Prisma P2025 error is thrown', () => {

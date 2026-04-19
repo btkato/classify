@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import { ZodError } from 'zod'
 import { Prisma } from 'db'
-import { NotFoundError, ValidationError } from '../lib/errors.js'
+import { NotFoundError, ValidationError, ForbiddenError } from '../lib/errors.js'
 
 export function errorHandler(
   err: unknown,
@@ -31,6 +31,11 @@ export function errorHandler(
 
   if (err instanceof ValidationError) {
     res.status(400).json({ error: { message: err.message } })
+    return
+  }
+
+  if (err instanceof ForbiddenError) {
+    res.status(403).json({ error: { message: err.message } })
     return
   }
 
