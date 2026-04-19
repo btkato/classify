@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prisma } from '../lib/prisma.js'
-import { createClass, listClasses, getClass, updateClass } from './classService.js'
+import { createClass, listClasses, getClass, updateClass, cancelClass } from './classService.js'
 import { ForbiddenError, NotFoundError } from '../lib/errors.js'
 
 vi.mock('../lib/prisma.js', () => ({
@@ -249,5 +249,36 @@ describe('updateClass', () => {
     await expect(updateClass('class_1', { title: 'New Title' }, 'user_1', false)).resolves.not.toThrow()
 
     expect(mockUpdate).toHaveBeenCalled()
+  })
+})
+
+describe('cancelClass', () => {
+  const existingClass = {
+    id: 'class_1',
+    instructorId: 'user_1',
+    title: 'Morning Yoga',
+    status: 'ACTIVE',
+    categoryId: 'cat_1',
+    capacity: 10,
+    startsAt: futureDate,
+    durationMinutes: 60,
+    description: null,
+    location: null,
+    recurringGroupId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  it('sets status to CANCELLED and returns the updated class', async () => {
+    const cancelledClass = { ...existingClass, status: 'CANCELLED' }
+    mockUpdate.mockResolvedValue(cancelledClass as never)
+
+    const result = await cancelClass('class_1')
+
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: 'class_1' },
+      data: { status: 'CANCELLED' },
+    })
+    expect(result.status).toBe('CANCELLED')
   })
 })

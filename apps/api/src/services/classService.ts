@@ -80,6 +80,13 @@ export async function updateClass(
   })
 }
 
+export async function cancelClass(id: string): Promise<Class> {
+  return prisma.class.update({
+    where: { id },
+    data: { status: 'CANCELLED' },
+  })
+}
+
 export async function createClass(input: CreateClassInput): Promise<Class> {
   if (input.startsAt <= new Date()) {
     throw new ValidationError('Class must start in the future')
