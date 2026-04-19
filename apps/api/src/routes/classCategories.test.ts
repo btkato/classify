@@ -91,7 +91,7 @@ describe('POST /class-categories', () => {
   describe('success', () => {
     it('returns 201 with the created category', async () => {
       const category = { id: 'cat_1', name: 'Yoga', createdAt: new Date() }
-      mockCreateCategory.mockResolvedValue(category)
+      mockCreateCategory.mockResolvedValue(category as never)
 
       const res = await request(app)
         .post('/class-categories')
@@ -127,7 +127,7 @@ describe('GET /class-categories', () => {
       { id: 'cat_1', name: 'Pilates', createdAt: new Date() },
       { id: 'cat_2', name: 'Yoga', createdAt: new Date() },
     ]
-    mockListCategories.mockResolvedValue(categories)
+    mockListCategories.mockResolvedValue(categories as never)
 
     const res = await request(app).get('/class-categories')
 
@@ -138,7 +138,7 @@ describe('GET /class-categories', () => {
   })
 
   it('returns 200 with an empty array when no categories exist', async () => {
-    mockListCategories.mockResolvedValue([])
+    mockListCategories.mockResolvedValue([] as never)
 
     const res = await request(app).get('/class-categories')
 
