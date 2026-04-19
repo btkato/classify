@@ -50,6 +50,25 @@ classesRouter.get(
 const classParamsSchema = z.object({ id: z.string().min(1) })
 
 classesRouter.get(
+  '/:id/roster',
+  requireAuth,
+  requireRoles(['INSTRUCTOR', 'ADMIN']),
+  asyncHandler(async (req, res) => {
+    const { id } = classParamsSchema.parse(req.params)
+    const userId = req.auth?.userId
+
+    if (!userId) {
+      res.status(401).json({ error: { message: 'Unauthorized' } })
+      return
+    }
+
+    const isAdmin = (req.userRoles ?? []).some((role) => role.role === 'ADMIN')
+    const roster = await getRoster(id, userId, isAdmin)
+    res.status(200).json(roster)
+  })
+)
+
+classesRouter.get(
   '/:id',
   asyncHandler(async (req, res) => {
     const { id } = classParamsSchema.parse(req.params)
@@ -76,25 +95,6 @@ classesRouter.patch(
 
     const updatedClass = await updateClass(id, body, userId, isAdmin)
     res.status(200).json(updatedClass)
-  })
-)
-
-classesRouter.get(
-  '/:id/roster',
-  requireAuth,
-  requireRoles(['INSTRUCTOR', 'ADMIN']),
-  asyncHandler(async (req, res) => {
-    const { id } = classParamsSchema.parse(req.params)
-    const userId = req.auth?.userId
-
-    if (!userId) {
-      res.status(401).json({ error: { message: 'Unauthorized' } })
-      return
-    }
-
-    const isAdmin = (req.userRoles ?? []).some((role) => role.role === 'ADMIN')
-    const roster = await getRoster(id, userId, isAdmin)
-    res.status(200).json(roster)
   })
 )
 

@@ -447,6 +447,15 @@ describe('GET /classes/:id/roster', () => {
     },
   ]
 
+  it('is not shadowed by GET /:id — roster path routes to the correct handler', async () => {
+    mockGetRoster.mockResolvedValue(roster as never)
+
+    await request(app).get('/classes/class_1/roster')
+
+    expect(mockGetRoster).toHaveBeenCalled()
+    expect(mockGetClass).not.toHaveBeenCalled()
+  })
+
   describe('authentication and authorisation', () => {
     it('returns 401 when not authenticated', async () => {
       mockGetAuth.mockReturnValue({ userId: null } as never)
