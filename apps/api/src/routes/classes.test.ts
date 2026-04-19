@@ -22,6 +22,7 @@ vi.mock('../services/classService.js', () => ({
   getClass: vi.fn(),
   updateClass: vi.fn(),
   cancelClass: vi.fn(),
+  getRoster: vi.fn(),
 }))
 
 import { app } from '../app.js'
@@ -36,6 +37,7 @@ const mockListClasses = vi.mocked(classService.listClasses)
 const mockGetClass = vi.mocked(classService.getClass)
 const mockUpdateClass = vi.mocked(classService.updateClass)
 const mockCancelClass = vi.mocked(classService.cancelClass)
+const mockGetRoster = vi.mocked(classService.getRoster)
 
 const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
 
@@ -421,6 +423,102 @@ describe('DELETE /classes/:id', () => {
       const res = await request(app).delete('/classes/class_1')
 
       expect(res.status).toBe(404)
+    })
+  })
+})
+
+describe('GET /classes/:id/roster', () => {
+  const roster = [
+    {
+      id: 'reg_1',
+      userId: 'user_2',
+      classId: 'class_1',
+      membershipId: null,
+      status: 'ENROLLED',
+      waitlistPosition: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      user: {
+        id: 'user_2',
+        email: 'student@example.com',
+        firstName: 'Jane',
+        lastName: 'Doe',
+      },
+    },
+  ]
+
+  describe('authentication and authorisation', () => {
+    it('returns 401 when not authenticated', async () => {
+      mockGetAuth.mockReturnValue({ userId: null } as never)
+
+      const res = await request(app).get('/classes/class_1/roster')
+
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 403 when authenticated as STUDENT', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'STUDENT' }] as never)
+
+      const res = await request(app).get('/classes/class_1/roster')
+
+      expect(res.status).toBe(403)
+    })
+
+    it('returns 200 when authenticated as INSTRUCTOR', async () => {
+      mockGetRoster.mockResolvedValue(roster as never)
+
+      const res = await request(app).get('/classes/class_1/roster')
+
+      expect(res.status).toBe(200)
+    })
+
+    it('returns 200 when authenticated as ADMIN', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
+      mockGetRoster.mockResolvedValue(roster as never)
+
+      const res = await request(app).get('/classes/class_1/roster')
+
+      expect(res.status).toBe(200)
+    })
+  })
+
+  describe('success', () => {
+    it('calls getRoster with classId, userId, and isAdmin and returns the roster', async () => {
+      mockGetRoster.mockResolvedValue(roster as never)
+
+      const res = await request(app).get('/classes/class_1/roster')
+
+      expect(mockGetRoster).toHaveBeenCalledWith('class_1', 'user_1', false)
+      expect(res.status).toBe(200)
+      expect(res.body).toHaveLength(1)
+      expect(res.body[0]).toMatchObject({ id: 'reg_1', status: 'ENROLLED' })
+    })
+
+    it('calls getRoster with isAdmin true when user is ADMIN', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
+      mockGetRoster.mockResolvedValue(roster as never)
+
+      await request(app).get('/classes/class_1/roster')
+
+      expect(mockGetRoster).toHaveBeenCalledWith('class_1', 'user_1', true)
+    })
+  })
+
+  describe('error handling', () => {
+    it('returns 404 when service throws NotFoundError', async () => {
+      mockGetRoster.mockRejectedValue(new NotFoundError('Class not found'))
+
+      const res = await request(app).get('/classes/class_1/roster')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 403 when service throws ForbiddenError', async () => {
+      mockGetRoster.mockRejectedValue(new ForbiddenError('You do not have permission to view this roster'))
+
+      const res = await request(app).get('/classes/class_1/roster')
+
+      expect(res.status).toBe(403)
     })
   })
 })
