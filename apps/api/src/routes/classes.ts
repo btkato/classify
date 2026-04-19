@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { requireAuth } from '../middleware/requireAuth.js'
 import { requireRoles } from '../middleware/requireRoles.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
-import { createClass, listClasses } from '../services/classService.js'
+import { createClass, listClasses, getClass } from '../services/classService.js'
 
 export const classesRouter = express.Router()
 
@@ -34,6 +34,17 @@ classesRouter.get(
       to: query.to,
     })
     res.status(200).json(classes)
+  })
+)
+
+const classParamsSchema = z.object({ id: z.string().min(1) })
+
+classesRouter.get(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const { id } = classParamsSchema.parse(req.params)
+    const foundClass = await getClass(id)
+    res.status(200).json(foundClass)
   })
 )
 
