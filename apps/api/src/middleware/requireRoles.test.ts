@@ -86,6 +86,19 @@ describe('requireRoles middleware', () => {
     expect(next).not.toHaveBeenCalled()
   })
 
+  it('attaches userRoles to req before calling next()', async () => {
+    mockFindMany.mockResolvedValue([{ role: 'INSTRUCTOR' }] as never)
+
+    const req = makeReq('user_123')
+    const res = makeRes()
+    const next = vi.fn() as unknown as NextFunction
+
+    await requireRoles(['INSTRUCTOR'])(req, res, next)
+
+    expect(req.userRoles).toEqual([{ role: 'INSTRUCTOR' }])
+    expect(next).toHaveBeenCalledOnce()
+  })
+
   it('returns 401 when req.auth is missing', async () => {
     const req = makeReq(undefined)
     const res = makeRes()
