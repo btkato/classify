@@ -235,6 +235,15 @@ describe('GET /classes', () => {
 
     expect(res.status).toBe(200)
   })
+
+  it('returns 400 when from is after to', async () => {
+    const from = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString()
+    const to = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
+
+    const res = await request(app).get(`/classes?from=${from}&to=${to}`)
+
+    expect(res.status).toBe(400)
+  })
 })
 
 describe('GET /classes/:id', () => {
