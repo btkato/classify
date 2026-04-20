@@ -7,6 +7,7 @@ import { adminRouter } from './routes/admin.js'
 import { classCategoriesRouter } from './routes/classCategories.js'
 import { classesRouter } from './routes/classes.js'
 import { membershipsRouter } from './routes/memberships.js'
+import { registrationsRouter } from './routes/registrations.js'
 
 export const app = express()
 
@@ -25,5 +26,6 @@ app.use('/admin', adminRouter)
 app.use('/class-categories', classCategoriesRouter)
 app.use('/classes', classesRouter)
 app.use('/memberships', membershipsRouter)
+app.use('/registrations', registrationsRouter)
 
 app.use(errorHandler)
