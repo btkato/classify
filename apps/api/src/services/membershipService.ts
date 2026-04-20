@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js'
 import { NotFoundError, ForbiddenError } from '../lib/errors.js'
-import type { Membership, MembershipType, Prisma, TriggerEvent } from 'db'
+import type { Membership, MembershipStatus, MembershipType, Prisma, TriggerEvent } from 'db'
 
 type MembershipWithTransactions = Prisma.MembershipGetPayload<{
   include: { membershipTransactions: true }
@@ -98,6 +98,41 @@ export async function getMembership(
   }
 
   return membership
+}
+
+interface UpdateMembershipInput {
+  classesRemaining?: number
+  status?: Extract<MembershipStatus, 'PAUSED' | 'CANCELLED'>
+}
+
+export async function updateMembership(id: string, input: UpdateMembershipInput): Promise<Membership> {
+  return prisma.$transaction(async (transaction) => {
+    const membership = await transaction.membership.findUnique({ where: { id } })
+
+    if (!membership) {
+      throw new NotFoundError('Membership not found')
+    }
+
+    if (input.classesRemaining !== undefined) {
+      const delta = input.classesRemaining - (membership.classesRemaining ?? 0)
+      await transaction.membershipTransaction.create({
+        data: {
+          membershipId: id,
+          delta,
+          balanceAfter: input.classesRemaining,
+          note: 'Admin adjustment',
+        },
+      })
+    }
+
+    return transaction.membership.update({
+      where: { id },
+      data: {
+        ...(input.status !== undefined && { status: input.status }),
+        ...(input.classesRemaining !== undefined && { classesRemaining: input.classesRemaining }),
+      },
+    })
+  })
 }
 
 export async function getValidMembership(userId: string): Promise<Membership | null> {
