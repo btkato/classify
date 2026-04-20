@@ -1,21 +1,7 @@
 import { prisma } from '../lib/prisma.js'
 import { NotFoundError, ForbiddenError, ValidationError } from '../lib/errors.js'
+import { getValidMembership } from './membershipService.js'
 import type { Registration, Prisma } from 'db'
-
-async function getValidMembershipTransaction(
-  userId: string, 
-  transaction: Prisma.TransactionClient
-): Promise<Prisma.MembershipGetPayload<object> | null> {
-  const memberships = await transaction.membership.findMany({
-    where: {
-      userId,
-      status: 'ACTIVE',
-      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-    },
-    orderBy: [{ priority: 'asc' }, { expiresAt: { sort: 'asc', nulls: 'last' } }],
-  })
-  return memberships.find((membership) => membership.classesRemaining === null || membership.classesRemaining > 0) ?? null
-}
 
 export async function enrollStudent(userId: string, classId: string): Promise<Registration> {
   return prisma.$transaction(async (transaction) => {
@@ -38,7 +24,7 @@ export async function enrollStudent(userId: string, classId: string): Promise<Re
       })
     }
 
-    const membership = await getValidMembershipTransaction(userId, transaction)
+    const membership = await getValidMembership(userId, transaction)
     if (!membership) throw new ValidationError('No valid membership found. Please purchase a membership to enroll.')
 
     const registration = await transaction.registration.create({
@@ -66,21 +52,21 @@ export async function enrollStudent(userId: string, classId: string): Promise<Re
 }
 
 export async function cancelRegistration(registrationId: string, userId: string): Promise<Registration> {
-  const registration = await prisma.registration.findUnique({
-    where: { id: registrationId },
-  })
-
-  if (!registration) throw new NotFoundError('Registration not found')
-  if (registration.userId !== userId) throw new ForbiddenError('You do not have permission to cancel this registration')
-  if (registration.status === 'CANCELLED') throw new ValidationError('Registration is already cancelled')
-  if (registration.status === 'ATTENDED' || registration.status === 'ABSENT') {
-    throw new ValidationError('Cannot cancel a completed registration')
-  }
-
   return prisma.$transaction(async (transaction) => {
+    const registration = await transaction.registration.findUnique({
+      where: { id: registrationId },
+    })
+
+    if (!registration) throw new NotFoundError('Registration not found')
+    if (registration.userId !== userId) throw new ForbiddenError('You do not have permission to cancel this registration')
+    if (registration.status === 'CANCELLED') throw new ValidationError('Registration is already cancelled')
+    if (registration.status === 'ATTENDED' || registration.status === 'ABSENT') {
+      throw new ValidationError('Cannot cancel a completed registration')
+    }
+
     const cancelled = await transaction.registration.update({
       where: { id: registrationId },
-      data: { status: 'CANCELLED' },
+      data: { status: 'CANCELLED', waitlistPosition: null },
     })
 
     if (registration.status === 'WAITLISTED') {
@@ -95,20 +81,46 @@ export async function cancelRegistration(registrationId: string, userId: string)
       return cancelled
     }
 
-    const firstWaitlisted = await transaction.registration.findFirst({
+    const waitlisted = await transaction.registration.findMany({
       where: { classId: registration.classId, status: 'WAITLISTED' },
       orderBy: { waitlistPosition: 'asc' },
     })
 
-    if (firstWaitlisted) {
+    for (const candidate of waitlisted) {
+      const membership = await getValidMembership(candidate.userId, transaction)
+      if (!membership) continue
+
       await transaction.registration.update({
-        where: { id: firstWaitlisted.id },
-        data: { status: 'ENROLLED', waitlistPosition: null },
+        where: { id: candidate.id },
+        data: { status: 'ENROLLED', waitlistPosition: null, membershipId: membership.id },
       })
+
+      if (membership.classesRemaining !== null) {
+        const newBalance = membership.classesRemaining - 1
+        await transaction.membership.update({
+          where: { id: membership.id },
+          data: { classesRemaining: newBalance },
+        })
+        await transaction.membershipTransaction.create({
+          data: {
+            membershipId: membership.id,
+            registrationId: candidate.id,
+            delta: -1,
+            balanceAfter: newBalance,
+          },
+        })
+      }
+
       await transaction.registration.updateMany({
-        where: { classId: registration.classId, status: 'WAITLISTED' },
+        where: {
+          classId: registration.classId,
+          status: 'WAITLISTED',
+          waitlistPosition: { gt: candidate.waitlistPosition ?? 0 },
+        },
         data: { waitlistPosition: { decrement: 1 } },
       })
+
+      break
     }
 
     if (registration.membershipId) {
@@ -122,7 +134,7 @@ export async function cancelRegistration(registrationId: string, userId: string)
         await transaction.membershipTransaction.create({
           data: {
             membershipId: membership.id,
-            registrationId: registration.id,
+            registrationId: registrationId,
             delta: 1,
             balanceAfter: newBalance,
           },
