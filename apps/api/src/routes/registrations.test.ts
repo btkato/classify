@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Request, Response, NextFunction } from 'express'
+import { Prisma } from 'db'
 
 vi.mock('@clerk/express', () => ({
   clerkMiddleware: () => (_req: Request, _res: Response, next: NextFunction) => next(),
@@ -62,6 +63,21 @@ describe('POST /registrations', () => {
 
     expect(response.status).toBe(201)
     expect(response.body).toMatchObject({ id: 'reg_1', status: 'ENROLLED' })
+  })
+
+  it('returns 409 when concurrent enrollment hits the unique constraint (race condition)', async () => {
+    const error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed on registrations', {
+      code: 'P2002',
+      clientVersion: '7.7.0',
+    })
+    mockEnrollStudent.mockRejectedValue(error)
+
+    const response = await request(app)
+      .post('/registrations')
+      .set('Authorization', 'Bearer token')
+      .send({ classId: 'class_1' })
+
+    expect(response.status).toBe(409)
   })
 
   it('calls enrollStudent with the authenticated userId and the provided classId', async () => {
