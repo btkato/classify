@@ -340,6 +340,7 @@ describe('getRoster', () => {
               },
             },
           },
+          orderBy: { waitlistPosition: 'asc' },
         },
       },
     })
@@ -364,5 +365,30 @@ describe('getRoster', () => {
     mockFindUnique.mockResolvedValue(classWithRoster as never)
 
     await expect(getRoster('class_1', 'other_user', false)).rejects.toThrow(ForbiddenError)
+  })
+
+  it('orders registrations by waitlistPosition ascending', async () => {
+    mockFindUnique.mockResolvedValue(classWithRoster as never)
+
+    await getRoster('class_1', 'user_1', false)
+
+    expect(mockFindUnique).toHaveBeenCalledWith({
+      where: { id: 'class_1' },
+      include: {
+        registrations: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { waitlistPosition: 'asc' },
+        },
+      },
+    })
   })
 })
