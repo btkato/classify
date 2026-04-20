@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma.js'
-import { NotFoundError, ForbiddenError } from '../lib/errors.js'
+import { NotFoundError, ForbiddenError, ValidationError } from '../lib/errors.js'
 import type { Membership, MembershipStatus, MembershipType, Prisma, TriggerEvent } from 'db'
 
 type MembershipWithTransactions = Prisma.MembershipGetPayload<{
@@ -36,6 +36,10 @@ function deriveMembershipFields(type: MembershipType): DerivedFields {
       return { priority: 2, classesTotal: 5, classesRemaining: 5, expiresAt: null }
     case 'CLASS_PACK_10':
       return { priority: 2, classesTotal: 10, classesRemaining: 10, expiresAt: null }
+    default: {
+      const _exhaustive: never = type
+      throw new Error(`Unhandled MembershipType: ${_exhaustive}`)
+    }
   }
 }
 
@@ -114,15 +118,21 @@ export async function updateMembership(id: string, input: UpdateMembershipInput)
     }
 
     if (input.classesRemaining !== undefined) {
+      if (membership.classesTotal === null) {
+        throw new ValidationError('Cannot adjust classesRemaining on a time-based membership')
+      }
+
       const delta = input.classesRemaining - (membership.classesRemaining ?? 0)
-      await transaction.membershipTransaction.create({
-        data: {
-          membershipId: id,
-          delta,
-          balanceAfter: input.classesRemaining,
-          note: 'Admin adjustment',
-        },
-      })
+      if (delta !== 0) {
+        await transaction.membershipTransaction.create({
+          data: {
+            membershipId: id,
+            delta,
+            balanceAfter: input.classesRemaining,
+            note: 'Admin adjustment',
+          },
+        })
+      }
     }
 
     return transaction.membership.update({

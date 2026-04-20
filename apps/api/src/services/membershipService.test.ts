@@ -7,7 +7,7 @@ import {
   getValidMembership,
   updateMembership,
 } from './membershipService.js'
-import { ForbiddenError, NotFoundError } from '../lib/errors.js'
+import { ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js'
 
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
@@ -591,5 +591,23 @@ describe('updateMembership', () => {
 
     await expect(updateMembership('mem_1', { classesRemaining: 5 })).rejects.toThrow('DB error')
     expect(mockTransactionCreate).toHaveBeenCalled()
+  })
+
+  it('does not write a MembershipTransaction when classesRemaining is unchanged', async () => {
+    await updateMembership('mem_1', { classesRemaining: 8 })
+
+    expect(mockTransactionCreate).not.toHaveBeenCalled()
+    expect(mockUpdate).toHaveBeenCalled()
+  })
+
+  it('throws ValidationError when adjusting classesRemaining on a time-based membership', async () => {
+    mockFindUnique.mockResolvedValue({
+      ...existingMembership,
+      type: 'MONTHLY',
+      classesTotal: null,
+      classesRemaining: null,
+    } as never)
+
+    await expect(updateMembership('mem_1', { classesRemaining: 5 })).rejects.toThrow(ValidationError)
   })
 })
