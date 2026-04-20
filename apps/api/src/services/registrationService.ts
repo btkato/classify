@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma.js'
 import { NotFoundError, ForbiddenError, ValidationError } from '../lib/errors.js'
 import { getValidMembership } from './membershipService.js'
-import type { Registration, Prisma } from 'db'
+import type { Registration } from 'db'
 
 export async function enrollStudent(userId: string, classId: string): Promise<Registration> {
   return prisma.$transaction(async (transaction) => {
