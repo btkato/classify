@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js'
 import { NotFoundError, ForbiddenError } from '../lib/errors.js'
-import type { Membership, MembershipType, Prisma } from 'db'
+import type { Membership, MembershipType, Prisma, TriggerEvent } from 'db'
 
 type MembershipWithTransactions = Prisma.MembershipGetPayload<{
   include: { membershipTransactions: true }
@@ -8,6 +8,13 @@ type MembershipWithTransactions = Prisma.MembershipGetPayload<{
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
 const YEAR_DAYS_MS = 365 * 24 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000
+
+const PURCHASE_TRIGGER_EVENTS: TriggerEvent[] = [
+  'AFTER_PURCHASE',
+  'MEMBERSHIP_EXPIRING',
+  'MEMBERSHIP_EXPIRED',
+]
 
 interface DerivedFields {
   priority: number
@@ -34,13 +41,34 @@ function deriveMembershipFields(type: MembershipType): DerivedFields {
 
 export async function createMembership(userId: string, type: MembershipType): Promise<Membership> {
   const derived = deriveMembershipFields(type)
-  return prisma.membership.create({
-    data: {
-      userId,
-      type,
-      status: 'ACTIVE',
-      ...derived,
-    },
+
+  return prisma.$transaction(async (transaction) => {
+    const membership = await transaction.membership.create({
+      data: { userId, type, status: 'ACTIVE', ...derived },
+    })
+
+    const triggers = await transaction.notificationTrigger.findMany({
+      where: { isActive: true, triggerEvent: { in: PURCHASE_TRIGGER_EVENTS } },
+    })
+
+    const now = Date.now()
+    const jobs = triggers.flatMap((trigger) => {
+      if (trigger.triggerEvent === 'AFTER_PURCHASE') {
+        return [{ userId, membershipId: membership.id, triggerId: trigger.id, triggerAt: new Date(now + trigger.offsetDays * DAY_MS) }]
+      }
+      if (!membership.expiresAt) return []
+      const expiresMs = membership.expiresAt.getTime()
+      if (trigger.triggerEvent === 'MEMBERSHIP_EXPIRING') {
+        return [{ userId, membershipId: membership.id, triggerId: trigger.id, triggerAt: new Date(expiresMs - trigger.offsetDays * DAY_MS) }]
+      }
+      return [{ userId, membershipId: membership.id, triggerId: trigger.id, triggerAt: new Date(expiresMs + trigger.offsetDays * DAY_MS) }]
+    })
+
+    if (jobs.length > 0) {
+      await transaction.notificationJob.createMany({ data: jobs })
+    }
+
+    return membership
   })
 }
 
