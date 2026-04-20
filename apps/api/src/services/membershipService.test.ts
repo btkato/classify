@@ -5,6 +5,7 @@ import {
   listMemberships,
   getMembership,
   getValidMembership,
+  updateMembership,
 } from './membershipService.js'
 import { ForbiddenError, NotFoundError } from '../lib/errors.js'
 
@@ -14,6 +15,10 @@ vi.mock('../lib/prisma.js', () => ({
       create: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      update: vi.fn(),
+    },
+    membershipTransaction: {
+      create: vi.fn(),
     },
     notificationTrigger: {
       findMany: vi.fn(),
@@ -28,6 +33,8 @@ vi.mock('../lib/prisma.js', () => ({
 const mockCreate = vi.mocked(prisma.membership.create)
 const mockFindMany = vi.mocked(prisma.membership.findMany)
 const mockFindUnique = vi.mocked(prisma.membership.findUnique)
+const mockUpdate = vi.mocked(prisma.membership.update)
+const mockTransactionCreate = vi.mocked(prisma.membershipTransaction.create)
 const mockTransaction = vi.mocked(prisma.$transaction)
 const mockTriggerFindMany = vi.mocked(prisma.notificationTrigger.findMany)
 const mockJobCreateMany = vi.mocked(prisma.notificationJob.createMany)
@@ -499,5 +506,90 @@ describe('getValidMembership', () => {
     const result = await getValidMembership('user_1')
 
     expect(result).toBeNull()
+  })
+})
+
+describe('updateMembership', () => {
+  const existingMembership = {
+    ...baseMembership,
+    type: 'CLASS_PACK_10' as const,
+    priority: 2,
+    classesTotal: 10,
+    classesRemaining: 8,
+    expiresAt: null,
+  }
+
+  beforeEach(() => {
+    mockFindUnique.mockResolvedValue(existingMembership as never)
+    mockUpdate.mockResolvedValue(existingMembership as never)
+    mockTransactionCreate.mockResolvedValue({} as never)
+  })
+
+  it('throws NotFoundError when the membership does not exist', async () => {
+    mockFindUnique.mockResolvedValue(null)
+
+    await expect(updateMembership('mem_1', { status: 'PAUSED' })).rejects.toThrow(NotFoundError)
+  })
+
+  it('updates status to PAUSED without writing a MembershipTransaction', async () => {
+    await updateMembership('mem_1', { status: 'PAUSED' })
+
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: 'mem_1' },
+      data: { status: 'PAUSED' },
+    })
+    expect(mockTransactionCreate).not.toHaveBeenCalled()
+  })
+
+  it('updates status to CANCELLED without writing a MembershipTransaction', async () => {
+    await updateMembership('mem_1', { status: 'CANCELLED' })
+
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: 'mem_1' },
+      data: { status: 'CANCELLED' },
+    })
+    expect(mockTransactionCreate).not.toHaveBeenCalled()
+  })
+
+  it('adjusting classesRemaining writes a MembershipTransaction with correct delta and balanceAfter', async () => {
+    await updateMembership('mem_1', { classesRemaining: 5 })
+
+    expect(mockTransactionCreate).toHaveBeenCalledWith({
+      data: {
+        membershipId: 'mem_1',
+        delta: -3,
+        balanceAfter: 5,
+        note: 'Admin adjustment',
+      },
+    })
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: 'mem_1' },
+      data: { classesRemaining: 5 },
+    })
+  })
+
+  it('adjusting classesRemaining upward writes a positive delta', async () => {
+    await updateMembership('mem_1', { classesRemaining: 10 })
+
+    expect(mockTransactionCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ delta: 2, balanceAfter: 10 }),
+    })
+  })
+
+  it('can update both status and classesRemaining together', async () => {
+    await updateMembership('mem_1', { status: 'PAUSED', classesRemaining: 3 })
+
+    expect(mockTransactionCreate).toHaveBeenCalled()
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: 'mem_1' },
+      data: { status: 'PAUSED', classesRemaining: 3 },
+    })
+  })
+
+  it('does not commit MembershipTransaction when membership.update fails', async () => {
+    mockUpdate.mockRejectedValue(new Error('DB error'))
+
+    await expect(updateMembership('mem_1', { classesRemaining: 5 })).rejects.toThrow('DB error')
+    expect(mockTransactionCreate).toHaveBeenCalled()
   })
 })
