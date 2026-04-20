@@ -15,15 +15,28 @@ vi.mock('../lib/prisma.js', () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
     },
+    notificationTrigger: {
+      findMany: vi.fn(),
+    },
+    notificationJob: {
+      createMany: vi.fn(),
+    },
+    $transaction: vi.fn(),
   },
 }))
 
 const mockCreate = vi.mocked(prisma.membership.create)
 const mockFindMany = vi.mocked(prisma.membership.findMany)
 const mockFindUnique = vi.mocked(prisma.membership.findUnique)
+const mockTransaction = vi.mocked(prisma.$transaction)
+const mockTriggerFindMany = vi.mocked(prisma.notificationTrigger.findMany)
+const mockJobCreateMany = vi.mocked(prisma.notificationJob.createMany)
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockTransaction.mockImplementation(async (fn) => fn(prisma as never))
+  mockTriggerFindMany.mockResolvedValue([])
+  mockJobCreateMany.mockResolvedValue({ count: 0 } as never)
 })
 
 const baseMembership = {
@@ -190,6 +203,129 @@ describe('createMembership', () => {
         expiresAt: null,
       }),
     })
+  })
+})
+
+describe('NotificationJob creation', () => {
+  const frozenNow = new Date('2026-01-01T00:00:00.000Z')
+  const monthlyMembership = {
+    ...baseMembership,
+    type: 'MONTHLY' as const,
+    priority: 1,
+    classesTotal: null,
+    classesRemaining: null,
+    expiresAt: new Date('2026-01-31T00:00:00.000Z'),
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(frozenNow)
+    mockCreate.mockResolvedValue(monthlyMembership as never)
+    mockTriggerFindMany.mockResolvedValue([])
+    mockJobCreateMany.mockResolvedValue({ count: 0 } as never)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('creates no jobs when there are no active triggers', async () => {
+    await createMembership('user_1', 'MONTHLY')
+
+    expect(mockJobCreateMany).not.toHaveBeenCalled()
+  })
+
+  it('creates an AFTER_PURCHASE job with triggerAt = now + offsetDays', async () => {
+    mockTriggerFindMany.mockResolvedValue([
+      { id: 'trig_1', triggerEvent: 'AFTER_PURCHASE', offsetDays: 7 },
+    ] as never)
+
+    await createMembership('user_1', 'MONTHLY')
+
+    expect(mockJobCreateMany).toHaveBeenCalledWith({
+      data: [
+        {
+          userId: 'user_1',
+          membershipId: baseMembership.id,
+          triggerId: 'trig_1',
+          triggerAt: new Date('2026-01-08T00:00:00.000Z'),
+        },
+      ],
+    })
+  })
+
+  it('creates a MEMBERSHIP_EXPIRING job with triggerAt = expiresAt - offsetDays', async () => {
+    mockTriggerFindMany.mockResolvedValue([
+      { id: 'trig_2', triggerEvent: 'MEMBERSHIP_EXPIRING', offsetDays: 3 },
+    ] as never)
+
+    await createMembership('user_1', 'MONTHLY')
+
+    expect(mockJobCreateMany).toHaveBeenCalledWith({
+      data: [
+        {
+          userId: 'user_1',
+          membershipId: baseMembership.id,
+          triggerId: 'trig_2',
+          triggerAt: new Date('2026-01-28T00:00:00.000Z'),
+        },
+      ],
+    })
+  })
+
+  it('creates a MEMBERSHIP_EXPIRED job with triggerAt = expiresAt + offsetDays', async () => {
+    mockTriggerFindMany.mockResolvedValue([
+      { id: 'trig_3', triggerEvent: 'MEMBERSHIP_EXPIRED', offsetDays: 0 },
+    ] as never)
+
+    await createMembership('user_1', 'MONTHLY')
+
+    expect(mockJobCreateMany).toHaveBeenCalledWith({
+      data: [
+        {
+          userId: 'user_1',
+          membershipId: baseMembership.id,
+          triggerId: 'trig_3',
+          triggerAt: new Date('2026-01-31T00:00:00.000Z'),
+        },
+      ],
+    })
+  })
+
+  it('skips MEMBERSHIP_EXPIRING and MEMBERSHIP_EXPIRED triggers when membership has no expiresAt', async () => {
+    mockCreate.mockResolvedValue({
+      ...baseMembership,
+      type: 'CLASS_PACK_5',
+      priority: 2,
+      classesTotal: 5,
+      classesRemaining: 5,
+      expiresAt: null,
+    } as never)
+    mockTriggerFindMany.mockResolvedValue([
+      { id: 'trig_2', triggerEvent: 'MEMBERSHIP_EXPIRING', offsetDays: 3 },
+      { id: 'trig_3', triggerEvent: 'MEMBERSHIP_EXPIRED', offsetDays: 0 },
+    ] as never)
+
+    await createMembership('user_1', 'CLASS_PACK_5')
+
+    expect(mockJobCreateMany).not.toHaveBeenCalled()
+  })
+
+  it('creates jobs for multiple matching triggers in one createMany call', async () => {
+    mockTriggerFindMany.mockResolvedValue([
+      { id: 'trig_1', triggerEvent: 'AFTER_PURCHASE', offsetDays: 7 },
+      { id: 'trig_2', triggerEvent: 'MEMBERSHIP_EXPIRING', offsetDays: 3 },
+    ] as never)
+
+    await createMembership('user_1', 'MONTHLY')
+
+    expect(mockJobCreateMany).toHaveBeenCalledWith({
+      data: expect.arrayContaining([
+        expect.objectContaining({ triggerId: 'trig_1' }),
+        expect.objectContaining({ triggerId: 'trig_2' }),
+      ]),
+    })
+    expect(mockJobCreateMany).toHaveBeenCalledTimes(1)
   })
 })
 
