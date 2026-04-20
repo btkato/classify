@@ -145,8 +145,13 @@ export async function updateMembership(id: string, input: UpdateMembershipInput)
   })
 }
 
-export async function getValidMembership(userId: string): Promise<Membership | null> {
-  const memberships = await prisma.membership.findMany({
+type PrismaOrTransaction = typeof prisma | Prisma.TransactionClient
+
+export async function getValidMembership(
+  userId: string,
+  db: PrismaOrTransaction = prisma
+): Promise<Membership | null> {
+  const memberships = await db.membership.findMany({
     where: {
       userId,
       status: 'ACTIVE',

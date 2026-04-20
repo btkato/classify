@@ -9,6 +9,7 @@ vi.mock('../lib/prisma.js', () => ({
     registration: {
       count: vi.fn(),
       findFirst: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock('../lib/prisma.js', () => ({
 const mockClassFindUnique = vi.mocked(prisma.class.findUnique)
 const mockRegistrationCount = vi.mocked(prisma.registration.count)
 const mockRegistrationFindFirst = vi.mocked(prisma.registration.findFirst)
+const mockRegistrationFindMany = vi.mocked(prisma.registration.findMany)
 const mockRegistrationCreate = vi.mocked(prisma.registration.create)
 const mockRegistrationFindUnique = vi.mocked(prisma.registration.findUnique)
 const mockRegistrationUpdate = vi.mocked(prisma.registration.update)
@@ -301,12 +303,12 @@ describe('cancelRegistration', () => {
       } as never)
     })
 
-    it('sets the registration status to CANCELLED', async () => {
+    it('sets the registration status to CANCELLED and clears waitlistPosition', async () => {
       await cancelRegistration('reg_1', 'user_1')
 
       expect(mockRegistrationUpdate).toHaveBeenCalledWith({
         where: { id: 'reg_1' },
-        data: { status: 'CANCELLED' },
+        data: { status: 'CANCELLED', waitlistPosition: null },
       })
     })
 
@@ -323,10 +325,10 @@ describe('cancelRegistration', () => {
       })
     })
 
-    it('does not promote anyone or write a MembershipTransaction', async () => {
+    it('does not attempt promotion or write a MembershipTransaction', async () => {
       await cancelRegistration('reg_1', 'user_1')
 
-      expect(mockRegistrationFindFirst).not.toHaveBeenCalled()
+      expect(mockRegistrationFindMany).not.toHaveBeenCalled()
       expect(mockMembershipTransactionCreate).not.toHaveBeenCalled()
     })
   })
@@ -342,15 +344,15 @@ describe('cancelRegistration', () => {
         ...baseRegistration,
         status: 'CANCELLED',
       } as never)
-      mockRegistrationFindFirst.mockResolvedValue(null)
+      mockRegistrationFindMany.mockResolvedValue([])
     })
 
-    it('sets the registration status to CANCELLED', async () => {
+    it('sets the registration status to CANCELLED and clears waitlistPosition', async () => {
       await cancelRegistration('reg_1', 'user_1')
 
       expect(mockRegistrationUpdate).toHaveBeenCalledWith({
         where: { id: 'reg_1' },
-        data: { status: 'CANCELLED' },
+        data: { status: 'CANCELLED', waitlistPosition: null },
       })
     })
 
@@ -379,18 +381,17 @@ describe('cancelRegistration', () => {
         status: 'ENROLLED',
         membershipId: null,
       } as never)
-      mockRegistrationUpdate
-        .mockResolvedValueOnce({ ...baseRegistration, status: 'CANCELLED' } as never)
-        .mockResolvedValueOnce({ ...waitlistedReg, status: 'ENROLLED', waitlistPosition: null } as never)
-      mockRegistrationFindFirst.mockResolvedValue(waitlistedReg as never)
+      mockRegistrationUpdate.mockResolvedValue({ ...baseRegistration, status: 'CANCELLED' } as never)
+      mockRegistrationFindMany.mockResolvedValue([waitlistedReg] as never)
+      mockMembershipFindMany.mockResolvedValue([timeMembership] as never)
     })
 
-    it('promotes the first waitlisted student to ENROLLED', async () => {
+    it('promotes the first waitlisted student with a valid membership', async () => {
       await cancelRegistration('reg_1', 'user_1')
 
       expect(mockRegistrationUpdate).toHaveBeenCalledWith({
         where: { id: 'reg_2' },
-        data: { status: 'ENROLLED', waitlistPosition: null },
+        data: { status: 'ENROLLED', waitlistPosition: null, membershipId: 'mem_1' },
       })
     })
 
@@ -398,8 +399,54 @@ describe('cancelRegistration', () => {
       await cancelRegistration('reg_1', 'user_1')
 
       expect(mockRegistrationUpdateMany).toHaveBeenCalledWith({
-        where: { classId: 'class_1', status: 'WAITLISTED' },
+        where: { classId: 'class_1', status: 'WAITLISTED', waitlistPosition: { gt: 1 } },
         data: { waitlistPosition: { decrement: 1 } },
+      })
+    })
+
+    it('skips a candidate with no valid membership and promotes the next', async () => {
+      const secondWaitlisted = { ...waitlistedReg, id: 'reg_3', userId: 'user_3', waitlistPosition: 2 }
+      mockRegistrationFindMany.mockResolvedValue([waitlistedReg, secondWaitlisted] as never)
+      mockMembershipFindMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([timeMembership] as never)
+
+      await cancelRegistration('reg_1', 'user_1')
+
+      expect(mockRegistrationUpdate).toHaveBeenCalledWith({
+        where: { id: 'reg_3' },
+        data: { status: 'ENROLLED', waitlistPosition: null, membershipId: 'mem_1' },
+      })
+    })
+
+    it('does not promote anyone when no waitlisted student has a valid membership', async () => {
+      mockMembershipFindMany.mockResolvedValue([])
+
+      await cancelRegistration('reg_1', 'user_1')
+
+      expect(mockRegistrationUpdate).toHaveBeenCalledTimes(1)
+      expect(mockRegistrationUpdate).toHaveBeenCalledWith({
+        where: { id: 'reg_1' },
+        data: { status: 'CANCELLED', waitlistPosition: null },
+      })
+    })
+
+    it('deducts classesRemaining and writes a MembershipTransaction when the promoted student has a pack membership', async () => {
+      mockMembershipFindMany.mockResolvedValue([packMembership] as never)
+
+      await cancelRegistration('reg_1', 'user_1')
+
+      expect(mockMembershipUpdate).toHaveBeenCalledWith({
+        where: { id: 'mem_2' },
+        data: { classesRemaining: 2 },
+      })
+      expect(mockMembershipTransactionCreate).toHaveBeenCalledWith({
+        data: {
+          membershipId: 'mem_2',
+          registrationId: 'reg_2',
+          delta: -1,
+          balanceAfter: 2,
+        },
       })
     })
   })
@@ -412,7 +459,7 @@ describe('cancelRegistration', () => {
     }
 
     beforeEach(() => {
-      mockRegistrationFindFirst.mockResolvedValue(null)
+      mockRegistrationFindMany.mockResolvedValue([])
       mockRegistrationUpdate.mockResolvedValue({
         ...enrolledWithPack,
         status: 'CANCELLED',
