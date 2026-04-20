@@ -28,8 +28,8 @@ export async function createUser(input: CreateUserInput): Promise<UserWithRoles>
   })
   if (existing) return existing
 
-  return prisma.$transaction(async (tx) => {
-    const user = await tx.user.create({
+  return prisma.$transaction(async (transaction) => {
+    const user = await transaction.user.create({
       data: {
         id: input.clerkId,
         email: input.email,
@@ -38,11 +38,11 @@ export async function createUser(input: CreateUserInput): Promise<UserWithRoles>
       },
     })
 
-    await tx.userRole.create({
+    await transaction.userRole.create({
       data: { userId: user.id, role: 'STUDENT' },
     })
 
-    return tx.user.findUniqueOrThrow({
+    return transaction.user.findUniqueOrThrow({
       where: { id: user.id },
       include: { roles: true },
     })
