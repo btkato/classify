@@ -119,6 +119,7 @@ export async function getRoster(
             },
           },
         },
+        orderBy: { waitlistPosition: 'asc' },
       },
     },
   })
