@@ -1,30 +1,42 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useClasses } from '../hooks/useClasses'
 import { useClassCategories } from '../hooks/useClassCategories'
+import { Button } from '../components/ui/button'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card'
+import { Badge } from '../components/ui/badge'
 import type { Class } from '../lib/types'
 
 function ClassCard({ cls }: { cls: Class }) {
-  const date = new Date(cls.startsAt).toLocaleString()
+  const date = new Date(cls.startsAt).toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+
   return (
-    <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-      <h2 className="text-lg font-semibold text-card-foreground">{cls.title}</h2>
-      {cls.description && (
-        <p className="mt-1 text-sm text-muted-foreground">{cls.description}</p>
-      )}
-      <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted-foreground">
-        <span>{date}</span>
-        <span>{cls.durationMinutes} min</span>
-        {cls.location && <span>{cls.location}</span>}
-        <span>Capacity: {cls.capacity}</span>
-      </div>
-    </div>
+    <Link to={`/classes/${cls.id}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl">
+      <Card className="h-full transition-shadow hover:shadow-md">
+        <CardHeader>
+          <CardTitle>{cls.title}</CardTitle>
+          {cls.description && (
+            <CardDescription>{cls.description}</CardDescription>
+          )}
+        </CardHeader>
+        <CardContent className="flex flex-col gap-1 text-sm text-muted-foreground">
+          <span>{date}</span>
+          <span>{cls.durationMinutes} min{cls.location ? ` · ${cls.location}` : ''}</span>
+          <span>Capacity: {cls.capacity}</span>
+        </CardContent>
+      </Card>
+    </Link>
   )
 }
 
 export default function ClassListPage() {
-  const [selectedCategoryId, setSelectedCategoryId] = useState<
-    string | undefined
-  >(undefined)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined)
 
   const { data: categories } = useClassCategories()
   const { data: classes, isLoading } = useClasses(selectedCategoryId)
@@ -42,33 +54,31 @@ export default function ClassListPage() {
       <h1 className="text-2xl font-bold">Classes</h1>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <button
+        <Button
+          variant={selectedCategoryId === undefined ? 'default' : 'secondary'}
+          size="sm"
+          className="rounded-full"
           onClick={() => setSelectedCategoryId(undefined)}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            selectedCategoryId === undefined
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-          }`}
         >
           All
-        </button>
+        </Button>
         {categories?.map((cat) => (
-          <button
+          <Button
             key={cat.id}
+            variant={selectedCategoryId === cat.id ? 'default' : 'secondary'}
+            size="sm"
+            className="rounded-full"
             onClick={() => setSelectedCategoryId(cat.id)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              selectedCategoryId === cat.id
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-            }`}
           >
             {cat.name}
-          </button>
+          </Button>
         ))}
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {classes?.map((cls) => <ClassCard key={cls.id} cls={cls} />)}
+        {classes?.map((cls) => (
+          <ClassCard key={cls.id} cls={cls} />
+        ))}
       </div>
     </main>
   )
