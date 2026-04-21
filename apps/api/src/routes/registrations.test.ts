@@ -9,16 +9,20 @@ vi.mock('@clerk/express', () => ({
 }))
 
 vi.mock('../services/registrationService.js')
+vi.mock('../services/lessonSetService.js')
 
 import { app } from '../app.js'
 import { getAuth } from '@clerk/express'
 import * as registrationService from '../services/registrationService.js'
+import * as lessonSetService from '../services/lessonSetService.js'
 
 const mockGetAuth = vi.mocked(getAuth)
 
 const mockEnrollStudent = vi.mocked(registrationService.enrollStudent)
 const mockCancelRegistration = vi.mocked(registrationService.cancelRegistration)
 const mockListRegistrations = vi.mocked(registrationService.listRegistrations)
+const mockEnrollInLessonSet = vi.mocked(lessonSetService.enrollInLessonSet)
+const mockCancelLessonSetRegistration = vi.mocked(lessonSetService.cancelLessonSetRegistration)
 
 const baseRegistration = {
   id: 'reg_1',
@@ -127,6 +131,84 @@ describe('DELETE /registrations/:id', () => {
       .set('Authorization', 'Bearer token')
 
     expect(mockCancelRegistration).toHaveBeenCalledWith('reg_1', 'user_1')
+  })
+})
+
+describe('POST /registrations/lesson-set', () => {
+  it('returns 401 when not authenticated', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+
+    const response = await request(app)
+      .post('/registrations/lesson-set')
+      .send({ lessonSetId: 'ls_1' })
+
+    expect(response.status).toBe(401)
+  })
+
+  it('returns 400 when lessonSetId is missing', async () => {
+    const response = await request(app)
+      .post('/registrations/lesson-set')
+      .set('Authorization', 'Bearer token')
+      .send({})
+
+    expect(response.status).toBe(400)
+  })
+
+  it('returns 201 with the created registrations', async () => {
+    const registrations = [
+      { ...baseRegistration, id: 'reg_1', classId: 'cls_1' },
+      { ...baseRegistration, id: 'reg_2', classId: 'cls_2' },
+    ]
+    mockEnrollInLessonSet.mockResolvedValue(registrations as never)
+
+    const response = await request(app)
+      .post('/registrations/lesson-set')
+      .set('Authorization', 'Bearer token')
+      .send({ lessonSetId: 'ls_1' })
+
+    expect(response.status).toBe(201)
+    expect(response.body).toHaveLength(2)
+  })
+
+  it('calls enrollInLessonSet with the lessonSetId and authenticated userId', async () => {
+    mockEnrollInLessonSet.mockResolvedValue([] as never)
+
+    await request(app)
+      .post('/registrations/lesson-set')
+      .set('Authorization', 'Bearer token')
+      .send({ lessonSetId: 'ls_1' })
+
+    expect(mockEnrollInLessonSet).toHaveBeenCalledWith('ls_1', 'user_1')
+  })
+})
+
+describe('DELETE /registrations/lesson-set/:lessonSetId', () => {
+  it('returns 401 when not authenticated', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+
+    const response = await request(app).delete('/registrations/lesson-set/ls_1')
+
+    expect(response.status).toBe(401)
+  })
+
+  it('returns 200 on success', async () => {
+    mockCancelLessonSetRegistration.mockResolvedValue(undefined)
+
+    const response = await request(app)
+      .delete('/registrations/lesson-set/ls_1')
+      .set('Authorization', 'Bearer token')
+
+    expect(response.status).toBe(200)
+  })
+
+  it('calls cancelLessonSetRegistration with the lessonSetId and authenticated userId', async () => {
+    mockCancelLessonSetRegistration.mockResolvedValue(undefined)
+
+    await request(app)
+      .delete('/registrations/lesson-set/ls_1')
+      .set('Authorization', 'Bearer token')
+
+    expect(mockCancelLessonSetRegistration).toHaveBeenCalledWith('ls_1', 'user_1')
   })
 })
 
