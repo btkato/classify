@@ -54,9 +54,10 @@ export default function MembershipsPage() {
   const queryClient = useQueryClient()
   const [confirmingCancelId, setConfirmingCancelId] = useState<string | null>(null)
   const [historyPage, setHistoryPage] = useState(1)
+  const HISTORY_LIMIT = 5
 
   const { data: memberships, isLoading: memsLoading } = useMemberships()
-  const { data: history, isLoading: historyLoading } = useMembershipHistory(historyPage)
+  const { data: history, isLoading: historyLoading } = useMembershipHistory(historyPage, HISTORY_LIMIT)
 
   const cancelMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -82,7 +83,7 @@ export default function MembershipsPage() {
   const historyData = history?.data ?? []
   const historyTotal = history?.total ?? 0
   const historyTotalPages = history?.totalPages ?? 0
-  const historyStart = historyTotal === 0 ? 0 : (historyPage - 1) * 5 + 1
+  const historyStart = historyTotal === 0 ? 0 : (historyPage - 1) * HISTORY_LIMIT + 1
   const historyEnd = historyTotal === 0 ? 0 : historyStart + historyData.length - 1
 
   return (

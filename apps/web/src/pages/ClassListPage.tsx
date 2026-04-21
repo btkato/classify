@@ -4,7 +4,6 @@ import { useClasses } from '../hooks/useClasses'
 import { useClassCategories } from '../hooks/useClassCategories'
 import { Button } from '../components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
 import type { Class } from '../lib/types'
 
 function ClassCard({ cls }: { cls: Class }) {
