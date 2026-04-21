@@ -31,6 +31,13 @@ export interface Membership {
   updatedAt: string
 }
 
+export interface MembershipHistoryPage {
+  data: Membership[]
+  total: number
+  page: number
+  totalPages: number
+}
+
 export interface ClassCategory {
   id: string
   name: string
