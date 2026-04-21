@@ -87,12 +87,10 @@ describe('POST /classes', () => {
       expect(res.status).toBe(403)
     })
 
-    it('returns 201 when authenticated as INSTRUCTOR', async () => {
-      mockCreateClass.mockResolvedValue(createdClass as never)
-
+    it('returns 403 when authenticated as INSTRUCTOR', async () => {
       const res = await request(app).post('/classes').send(validBody)
 
-      expect(res.status).toBe(201)
+      expect(res.status).toBe(403)
     })
 
     it('returns 201 when authenticated as ADMIN', async () => {
@@ -106,6 +104,10 @@ describe('POST /classes', () => {
   })
 
   describe('request validation', () => {
+    beforeEach(() => {
+      mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
+    })
+
     it('returns 400 when title is missing', async () => {
       const { title: _, ...body } = validBody
 
@@ -153,6 +155,7 @@ describe('POST /classes', () => {
 
   describe('success', () => {
     it('calls createClass with instructorId from auth and returns 201 with the created class', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
       mockCreateClass.mockResolvedValue(createdClass as never)
 
       const res = await request(app).post('/classes').send(validBody)
@@ -173,6 +176,7 @@ describe('POST /classes', () => {
 
   describe('error handling', () => {
     it('returns 400 when service throws a ValidationError', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
       mockCreateClass.mockRejectedValue(new ValidationError('Class must start in the future'))
 
       const res = await request(app).post('/classes').send(validBody)

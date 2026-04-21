@@ -227,14 +227,14 @@ describe('updateClass', () => {
   })
 
   it('calls prisma.class.update with the given fields and returns the result', async () => {
-    const updatedClass = { ...existingClass, title: 'Evening Yoga' }
+    const updatedClass = { ...existingClass, location: 'Studio B' }
     mockUpdate.mockResolvedValue(updatedClass as never)
 
-    const result = await updateClass('class_1', { title: 'Evening Yoga' }, 'user_1', false)
+    const result = await updateClass('class_1', { location: 'Studio B' }, 'user_1', false)
 
     expect(mockUpdate).toHaveBeenCalledWith({
       where: { id: 'class_1' },
-      data: { title: 'Evening Yoga' },
+      data: { location: 'Studio B' },
     })
     expect(result).toEqual(updatedClass)
   })
@@ -246,7 +246,7 @@ describe('updateClass', () => {
   })
 
   it('throws ForbiddenError when requester is not the owner and not admin', async () => {
-    await expect(updateClass('class_1', { title: 'New Title' }, 'other_user', false)).rejects.toThrow(ForbiddenError)
+    await expect(updateClass('class_1', { location: 'Studio B' }, 'other_user', false)).rejects.toThrow(ForbiddenError)
 
     expect(mockUpdate).not.toHaveBeenCalled()
   })
@@ -262,7 +262,7 @@ describe('updateClass', () => {
   it('throws ValidationError when startsAt is in the past', async () => {
     const pastDate = new Date(Date.now() - 1000 * 60 * 60)
 
-    await expect(updateClass('class_1', { startsAt: pastDate }, 'user_1', false)).rejects.toThrow('Class must start in the future')
+    await expect(updateClass('class_1', { startsAt: pastDate }, 'user_1', true)).rejects.toThrow('Class must start in the future')
 
     expect(mockUpdate).not.toHaveBeenCalled()
   })
@@ -270,9 +270,61 @@ describe('updateClass', () => {
   it('does not validate startsAt when it is not provided', async () => {
     mockUpdate.mockResolvedValue(existingClass as never)
 
-    await expect(updateClass('class_1', { title: 'New Title' }, 'user_1', false)).resolves.not.toThrow()
+    await expect(updateClass('class_1', { location: 'Studio B' }, 'user_1', false)).resolves.not.toThrow()
 
     expect(mockUpdate).toHaveBeenCalled()
+  })
+
+  describe('instructor field restrictions', () => {
+    it('throws ForbiddenError when instructor tries to update title', async () => {
+      await expect(updateClass('class_1', { title: 'New Title' }, 'user_1', false)).rejects.toThrow(ForbiddenError)
+
+      expect(mockUpdate).not.toHaveBeenCalled()
+    })
+
+    it('throws ForbiddenError when instructor tries to update capacity', async () => {
+      await expect(updateClass('class_1', { capacity: 20 }, 'user_1', false)).rejects.toThrow(ForbiddenError)
+
+      expect(mockUpdate).not.toHaveBeenCalled()
+    })
+
+    it('throws ForbiddenError when instructor tries to update startsAt', async () => {
+      await expect(updateClass('class_1', { startsAt: futureDate }, 'user_1', false)).rejects.toThrow(ForbiddenError)
+
+      expect(mockUpdate).not.toHaveBeenCalled()
+    })
+
+    it('throws ForbiddenError when instructor tries to update durationMinutes', async () => {
+      await expect(updateClass('class_1', { durationMinutes: 90 }, 'user_1', false)).rejects.toThrow(ForbiddenError)
+
+      expect(mockUpdate).not.toHaveBeenCalled()
+    })
+
+    it('allows instructor to update description', async () => {
+      mockUpdate.mockResolvedValue(existingClass as never)
+
+      await expect(updateClass('class_1', { description: 'New description' }, 'user_1', false)).resolves.not.toThrow()
+
+      expect(mockUpdate).toHaveBeenCalled()
+    })
+
+    it('allows instructor to update location', async () => {
+      mockUpdate.mockResolvedValue(existingClass as never)
+
+      await expect(updateClass('class_1', { location: 'Studio B' }, 'user_1', false)).resolves.not.toThrow()
+
+      expect(mockUpdate).toHaveBeenCalled()
+    })
+
+    it('allows admin to update any field', async () => {
+      mockUpdate.mockResolvedValue(existingClass as never)
+
+      await expect(
+        updateClass('class_1', { title: 'New Title', capacity: 20 }, 'other_user', true)
+      ).resolves.not.toThrow()
+
+      expect(mockUpdate).toHaveBeenCalled()
+    })
   })
 })
 
