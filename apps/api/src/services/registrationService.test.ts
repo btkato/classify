@@ -288,6 +288,26 @@ describe('cancelRegistration', () => {
 
       await expect(cancelRegistration('reg_1', 'user_1')).rejects.toThrow(ValidationError)
     })
+
+    it('throws ValidationError when the class belongs to a FULL_SET lesson set', async () => {
+      mockRegistrationFindUnique.mockResolvedValue({ ...baseRegistration, status: 'ENROLLED' } as never)
+      mockClassFindUnique.mockResolvedValue({ lessonSet: { enrollmentType: 'FULL_SET' } } as never)
+
+      await expect(cancelRegistration('reg_1', 'user_1')).rejects.toThrow(ValidationError)
+    })
+
+    it('allows cancellation when the class belongs to a DROP_IN lesson set', async () => {
+      mockRegistrationFindUnique.mockResolvedValue({
+        ...baseRegistration,
+        status: 'ENROLLED',
+        membershipId: null,
+      } as never)
+      mockClassFindUnique.mockResolvedValue({ lessonSet: { enrollmentType: 'DROP_IN' } } as never)
+      mockRegistrationFindMany.mockResolvedValue([])
+      mockRegistrationUpdate.mockResolvedValue({ ...baseRegistration, status: 'CANCELLED' } as never)
+
+      await expect(cancelRegistration('reg_1', 'user_1')).resolves.not.toThrow()
+    })
   })
 
   describe('cancelling a WAITLISTED registration', () => {
