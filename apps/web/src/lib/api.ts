@@ -1,3 +1,9 @@
+import { z } from 'zod'
+
+const errorBodySchema = z.object({
+  error: z.union([z.string(), z.object({ message: z.string() })]).optional(),
+})
+
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 async function apiFetch<T>(
@@ -17,8 +23,11 @@ async function apiFetch<T>(
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`)
+    const raw = await res.json().catch(() => ({}))
+    const parsed = errorBodySchema.safeParse(raw)
+    const errorValue = parsed.success ? parsed.data.error : undefined
+    const message = typeof errorValue === 'string' ? errorValue : errorValue?.message
+    throw new Error(message ?? `HTTP ${res.status}`)
   }
 
   return res.json() as Promise<T>
