@@ -19,7 +19,10 @@ if (!rootElement) throw new Error('Root element not found')
 
 createRoot(rootElement).render(
   <StrictMode>
-    <ClerkProvider publishableKey={clerkPublishableKey}>
+    <ClerkProvider
+        publishableKey={clerkPublishableKey}
+        signInFallbackRedirectUrl="/dashboard"
+      >
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <App />
