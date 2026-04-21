@@ -1,5 +1,6 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { SignIn, SignUp } from '@clerk/clerk-react'
+import { z } from 'zod'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import ClassListPage from './pages/ClassListPage'
@@ -9,6 +10,14 @@ import MyRegistrationsPage from './pages/MyRegistrationsPage'
 import MembershipsPage from './pages/MembershipsPage'
 import MembershipPurchasePage from './pages/MembershipPurchasePage'
 
+const locationStateSchema = z.object({ from: z.object({ pathname: z.string() }) }).nullable()
+
+function SignInPage() {
+  const location = useLocation()
+  const from = locationStateSchema.safeParse(location.state).data?.from?.pathname ?? '/dashboard'
+  return <SignIn routing="path" path="/sign-in" forceRedirectUrl={from} />
+}
+
 export default function App() {
   return (
     <Routes>
@@ -17,7 +26,7 @@ export default function App() {
         <Route path="/classes" element={<ClassListPage />} />
         <Route path="/classes/:id" element={<ClassDetailPage />} />
 
-        <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
+        <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
 
         <Route
