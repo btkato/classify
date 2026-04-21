@@ -24,6 +24,7 @@ export {
   RegistrationStatus,
   NotificationStatus,
   TriggerEvent,
+  EnrollmentType,
 } from '@prisma/client'
 
 export type {
@@ -35,6 +36,7 @@ export type {
   Membership,
   MembershipTransaction,
   Class,
+  LessonSet,
   ClassCategory,
   Registration,
   Announcement,
