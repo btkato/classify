@@ -5,9 +5,9 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <div>
         <Outlet />
-      </main>
+      </div>
     </div>
   )
 }
