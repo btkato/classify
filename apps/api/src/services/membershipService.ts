@@ -83,6 +83,31 @@ export async function listMemberships(userId: string): Promise<Membership[]> {
   })
 }
 
+interface MembershipHistoryPage {
+  data: Membership[]
+  total: number
+  page: number
+  totalPages: number
+}
+
+export async function listMembershipHistory(
+  userId: string,
+  page: number = 1,
+  limit: number = 5
+): Promise<MembershipHistoryPage> {
+  const [data, total] = await Promise.all([
+    prisma.membership.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.membership.count({ where: { userId } }),
+  ])
+
+  return { data, total, page, totalPages: Math.ceil(total / limit) }
+}
+
 export async function getMembership(
   id: string,
   userId: string,
