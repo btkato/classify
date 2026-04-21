@@ -162,15 +162,35 @@ describe('listClasses', () => {
   })
 })
 
+const enrolledCountQuery = {
+  where: { id: 'class_1' },
+  include: {
+    _count: {
+      select: {
+        registrations: { where: { status: 'ENROLLED' } },
+      },
+    },
+  },
+}
+
 describe('getClass', () => {
-  it('returns the class when found', async () => {
-    const foundClass = { id: 'class_1', title: 'Morning Yoga' }
+  it('returns the class with enrolledCount when found', async () => {
+    const foundClass = { id: 'class_1', title: 'Morning Yoga', _count: { registrations: 0 } }
     mockFindUnique.mockResolvedValue(foundClass as never)
 
     const result = await getClass('class_1')
 
-    expect(mockFindUnique).toHaveBeenCalledWith({ where: { id: 'class_1' } })
-    expect(result).toEqual(foundClass)
+    expect(mockFindUnique).toHaveBeenCalledWith(enrolledCountQuery)
+    expect(result.enrolledCount).toBe(0)
+  })
+
+  it('returns the correct enrolledCount from registrations', async () => {
+    const foundClass = { id: 'class_1', title: 'Morning Yoga', _count: { registrations: 4 } }
+    mockFindUnique.mockResolvedValue(foundClass as never)
+
+    const result = await getClass('class_1')
+
+    expect(result.enrolledCount).toBe(4)
   })
 
   it('throws NotFoundError when the class does not exist', async () => {
@@ -178,7 +198,7 @@ describe('getClass', () => {
 
     await expect(getClass('nonexistent')).rejects.toThrow('Class not found')
 
-    expect(mockFindUnique).toHaveBeenCalledWith({ where: { id: 'nonexistent' } })
+    expect(mockFindUnique).toHaveBeenCalledWith({ ...enrolledCountQuery, where: { id: 'nonexistent' } })
   })
 })
 
