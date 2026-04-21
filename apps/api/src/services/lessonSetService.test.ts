@@ -7,8 +7,9 @@ import {
   updateLessonSet,
   deleteLessonSet,
   cancelLessonSetRegistration,
+  enrollInLessonSet,
 } from './lessonSetService.js'
-import { NotFoundError } from '../lib/errors.js'
+import { NotFoundError, ValidationError } from '../lib/errors.js'
 
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
@@ -23,11 +24,15 @@ vi.mock('../lib/prisma.js', () => ({
       updateMany: vi.fn(),
     },
     registration: {
+      count: vi.fn(),
+      create: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
     },
     membership: {
+      findMany: vi.fn(),
       update: vi.fn(),
     },
     membershipTransaction: {
@@ -44,9 +49,13 @@ const mockLessonSetFindUnique = vi.mocked(prisma.lessonSet.findUnique)
 const mockLessonSetUpdate = vi.mocked(prisma.lessonSet.update)
 const mockClassCreate = vi.mocked(prisma.class.create)
 const mockClassUpdateMany = vi.mocked(prisma.class.updateMany)
+const mockRegistrationCount = vi.mocked(prisma.registration.count)
+const mockRegistrationCreate = vi.mocked(prisma.registration.create)
+const mockRegistrationFindFirst = vi.mocked(prisma.registration.findFirst)
 const mockRegistrationFindMany = vi.mocked(prisma.registration.findMany)
 const mockRegistrationUpdate = vi.mocked(prisma.registration.update)
 const mockRegistrationUpdateMany = vi.mocked(prisma.registration.updateMany)
+const mockMembershipFindMany = vi.mocked(prisma.membership.findMany)
 const mockMembershipUpdate = vi.mocked(prisma.membership.update)
 const mockMembershipTransactionCreate = vi.mocked(prisma.membershipTransaction.create)
 
@@ -124,16 +133,16 @@ describe('createLessonSet', () => {
   it('spaces sessions by intervalDays', async () => {
     await createLessonSet(validInput)
 
-    const dates: Date[] = mockClassCreate.mock.calls.map((c) => c[0].data.startsAt)
-    expect(dates[1].getTime() - dates[0].getTime()).toBe(validInput.intervalDays * msPerDay)
-    expect(dates[2].getTime() - dates[1].getTime()).toBe(validInput.intervalDays * msPerDay)
+    const session2Date = new Date(futureDate.getTime() + validInput.intervalDays * msPerDay)
+    const session3Date = new Date(futureDate.getTime() + 2 * validInput.intervalDays * msPerDay)
+    expect(mockClassCreate).toHaveBeenNthCalledWith(2, { data: expect.objectContaining({ startsAt: session2Date }) })
+    expect(mockClassCreate).toHaveBeenNthCalledWith(3, { data: expect.objectContaining({ startsAt: session3Date }) })
   })
 
   it('sets the first session startsAt to firstSessionStartsAt', async () => {
     await createLessonSet(validInput)
 
-    const firstStartsAt: Date = mockClassCreate.mock.calls[0][0].data.startsAt
-    expect(firstStartsAt).toEqual(validInput.firstSessionStartsAt)
+    expect(mockClassCreate).toHaveBeenNthCalledWith(1, { data: expect.objectContaining({ startsAt: validInput.firstSessionStartsAt }) })
   })
 
   it('sets lessonSetId on every generated class', async () => {
@@ -151,8 +160,7 @@ describe('createLessonSet', () => {
       sessionOverrides: [{ sessionNumber: 2, startsAt: overrideDate }],
     })
 
-    const session2StartsAt: Date = mockClassCreate.mock.calls[1][0].data.startsAt
-    expect(session2StartsAt).toEqual(overrideDate)
+    expect(mockClassCreate).toHaveBeenNthCalledWith(2, { data: expect.objectContaining({ startsAt: overrideDate }) })
   })
 
   it('applies a location override for the specified session', async () => {
@@ -161,8 +169,8 @@ describe('createLessonSet', () => {
       sessionOverrides: [{ sessionNumber: 3, location: 'Studio B' }],
     })
 
-    expect(mockClassCreate.mock.calls[2][0].data.location).toBe('Studio B')
-    expect(mockClassCreate.mock.calls[0][0].data.location).toBeUndefined()
+    expect(mockClassCreate).toHaveBeenNthCalledWith(3, { data: expect.objectContaining({ location: 'Studio B' }) })
+    expect(mockClassCreate).toHaveBeenNthCalledWith(1, { data: expect.objectContaining({ location: undefined }) })
   })
 
   it('non-overridden sessions keep the default cadence date', async () => {
@@ -172,12 +180,9 @@ describe('createLessonSet', () => {
       sessionOverrides: [{ sessionNumber: 2, startsAt: overrideDate }],
     })
 
-    const session1StartsAt: Date = mockClassCreate.mock.calls[0][0].data.startsAt
-    const session3StartsAt: Date = mockClassCreate.mock.calls[2][0].data.startsAt
-    expect(session1StartsAt).toEqual(validInput.firstSessionStartsAt)
-    expect(session3StartsAt.getTime()).toBe(
-      validInput.firstSessionStartsAt.getTime() + 2 * validInput.intervalDays * msPerDay
-    )
+    const session3Date = new Date(futureDate.getTime() + 2 * validInput.intervalDays * msPerDay)
+    expect(mockClassCreate).toHaveBeenNthCalledWith(1, { data: expect.objectContaining({ startsAt: validInput.firstSessionStartsAt }) })
+    expect(mockClassCreate).toHaveBeenNthCalledWith(3, { data: expect.objectContaining({ startsAt: session3Date }) })
   })
 
   it('returns the created lesson set', async () => {
@@ -428,6 +433,168 @@ describe('cancelLessonSetRegistration', () => {
       await cancelLessonSetRegistration('ls_1', 'user_1')
 
       expect(mockRegistrationUpdateMany).not.toHaveBeenCalled()
+    })
+  })
+})
+
+// ─── enrollInLessonSet (student enroll in full set) ───────────────────────────
+
+describe('enrollInLessonSet', () => {
+  const session1StartsAt = new Date(Date.now() + 7 * msPerDay)
+  const session2StartsAt = new Date(Date.now() + 14 * msPerDay)
+
+  const sessions = [
+    { id: 'cls_1', sessionNumber: 1, startsAt: session1StartsAt, capacity: 10 },
+    { id: 'cls_2', sessionNumber: 2, startsAt: session2StartsAt, capacity: 10 },
+  ]
+
+  const fullSetWithSessions = { ...lessonSetRecord, enrollmentType: 'FULL_SET', classes: sessions }
+
+  const timeMembership = {
+    id: 'mem_1',
+    userId: 'user_1',
+    type: 'MONTHLY',
+    status: 'ACTIVE',
+    priority: 1,
+    classesRemaining: null,
+    classesTotal: null,
+    expiresAt: new Date(Date.now() + 30 * msPerDay),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  const packMembership = {
+    id: 'mem_2',
+    userId: 'user_1',
+    type: 'CLASS_PACK_5',
+    status: 'ACTIVE',
+    priority: 2,
+    classesRemaining: 5,
+    classesTotal: 5,
+    expiresAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  it('throws NotFoundError when the lesson set does not exist', async () => {
+    mockLessonSetFindUnique.mockResolvedValue(null)
+
+    await expect(enrollInLessonSet('nonexistent', 'user_1')).rejects.toThrow(NotFoundError)
+  })
+
+  it('throws ValidationError when the lesson set is DROP_IN', async () => {
+    mockLessonSetFindUnique.mockResolvedValue({
+      ...fullSetWithSessions,
+      enrollmentType: 'DROP_IN',
+    } as never)
+
+    await expect(enrollInLessonSet('ls_1', 'user_1')).rejects.toThrow(ValidationError)
+  })
+
+  it('throws ValidationError when the lesson set has already started', async () => {
+    const startedSessions = [
+      { ...sessions[0], startsAt: new Date(Date.now() - msPerDay) },
+      sessions[1],
+    ]
+    mockLessonSetFindUnique.mockResolvedValue(
+      { ...fullSetWithSessions, classes: startedSessions } as never
+    )
+
+    await expect(enrollInLessonSet('ls_1', 'user_1')).rejects.toThrow(ValidationError)
+  })
+
+  it('throws ValidationError when the student has no valid membership', async () => {
+    mockLessonSetFindUnique.mockResolvedValue(fullSetWithSessions as never)
+    mockMembershipFindMany.mockResolvedValue([])
+
+    await expect(enrollInLessonSet('ls_1', 'user_1')).rejects.toThrow(ValidationError)
+  })
+
+  it('throws ValidationError when a pack membership does not have enough credits for all sessions', async () => {
+    const smallPack = { ...packMembership, classesRemaining: 1 }
+    mockLessonSetFindUnique.mockResolvedValue(fullSetWithSessions as never)
+    mockMembershipFindMany.mockResolvedValue([smallPack] as never)
+
+    await expect(enrollInLessonSet('ls_1', 'user_1')).rejects.toThrow(ValidationError)
+  })
+
+  describe('all sessions have space', () => {
+    beforeEach(() => {
+      mockLessonSetFindUnique.mockResolvedValue(fullSetWithSessions as never)
+      mockRegistrationCount.mockResolvedValue(5)
+      mockRegistrationCreate.mockResolvedValueOnce({ id: 'reg_1', classId: 'cls_1', status: 'ENROLLED' } as never)
+      mockRegistrationCreate.mockResolvedValueOnce({ id: 'reg_2', classId: 'cls_2', status: 'ENROLLED' } as never)
+    })
+
+    it('creates an ENROLLED registration for each session', async () => {
+      mockMembershipFindMany.mockResolvedValue([timeMembership] as never)
+
+      await enrollInLessonSet('ls_1', 'user_1')
+
+      expect(mockRegistrationCreate).toHaveBeenCalledTimes(2)
+      expect(mockRegistrationCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({ classId: 'cls_1', status: 'ENROLLED', membershipId: 'mem_1' }),
+      })
+      expect(mockRegistrationCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({ classId: 'cls_2', status: 'ENROLLED', membershipId: 'mem_1' }),
+      })
+    })
+
+    it('deducts one pack credit per enrolled session and writes a MembershipTransaction for each', async () => {
+      mockMembershipFindMany.mockResolvedValue([packMembership] as never)
+
+      await enrollInLessonSet('ls_1', 'user_1')
+
+      expect(mockMembershipUpdate).toHaveBeenCalledWith({
+        where: { id: 'mem_2' },
+        data: { classesRemaining: { decrement: 2 } },
+      })
+      expect(mockMembershipTransactionCreate).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not deduct or write transactions for a time-based membership', async () => {
+      mockMembershipFindMany.mockResolvedValue([timeMembership] as never)
+
+      await enrollInLessonSet('ls_1', 'user_1')
+
+      expect(mockMembershipUpdate).not.toHaveBeenCalled()
+      expect(mockMembershipTransactionCreate).not.toHaveBeenCalled()
+    })
+
+    it('returns all created registrations', async () => {
+      mockMembershipFindMany.mockResolvedValue([timeMembership] as never)
+
+      const result = await enrollInLessonSet('ls_1', 'user_1')
+
+      expect(result).toHaveLength(2)
+    })
+  })
+
+  describe('any session is at capacity', () => {
+    beforeEach(() => {
+      mockLessonSetFindUnique.mockResolvedValue(fullSetWithSessions as never)
+      mockMembershipFindMany.mockResolvedValue([timeMembership] as never)
+      mockRegistrationCount.mockResolvedValueOnce(10)
+      mockRegistrationFindFirst.mockResolvedValue(null)
+      mockRegistrationCreate
+        .mockResolvedValueOnce({ id: 'reg_1', classId: 'cls_1', status: 'WAITLISTED', waitlistPosition: 1 } as never)
+        .mockResolvedValueOnce({ id: 'reg_2', classId: 'cls_2', status: 'WAITLISTED', waitlistPosition: 1 } as never)
+    })
+
+    it('creates WAITLISTED registrations for all sessions', async () => {
+      await enrollInLessonSet('ls_1', 'user_1')
+
+      expect(mockRegistrationCreate).toHaveBeenCalledTimes(2)
+      for (const call of mockRegistrationCreate.mock.calls) {
+        expect(call[0].data.status).toBe('WAITLISTED')
+      }
+    })
+
+    it('does not deduct any membership credits when waitlisted', async () => {
+      await enrollInLessonSet('ls_1', 'user_1')
+
+      expect(mockMembershipUpdate).not.toHaveBeenCalled()
+      expect(mockMembershipTransactionCreate).not.toHaveBeenCalled()
     })
   })
 })

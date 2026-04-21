@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js'
-import { NotFoundError } from '../lib/errors.js'
-import type { LessonSet, EnrollmentType, ClassStatus, Prisma } from 'db'
+import { NotFoundError, ValidationError } from '../lib/errors.js'
+import { getValidMembership } from './membershipService.js'
+import type { LessonSet, EnrollmentType, ClassStatus, Registration, Prisma } from 'db'
 
 interface SessionOverride {
   sessionNumber: number
@@ -30,7 +31,7 @@ interface UpdateLessonSetInput {
 }
 
 export type LessonSetWithClasses = Prisma.LessonSetGetPayload<{
-  include: { classes: { orderBy: { sessionNumber: 'asc' } } }
+  include: { classes: true }
 }>
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
@@ -118,6 +119,93 @@ export async function deleteLessonSet(id: string): Promise<LessonSet> {
   })
 }
 
+export async function enrollInLessonSet(
+  lessonSetId: string,
+  userId: string
+): Promise<Registration[]> {
+  const lessonSet = await prisma.lessonSet.findUnique({
+    where: { id: lessonSetId },
+    include: { classes: { where: { status: 'ACTIVE' }, orderBy: { sessionNumber: 'asc' } } },
+  })
+
+  if (!lessonSet) throw new NotFoundError('Lesson set not found')
+
+  if (lessonSet.enrollmentType === 'DROP_IN') {
+    throw new ValidationError('This lesson set does not support full-set enrollment. Enroll per session instead.')
+  }
+
+  const now = new Date()
+  const firstSession = lessonSet.classes.at(0)
+  if (firstSession !== undefined && firstSession.startsAt <= now) {
+    throw new ValidationError('Cannot enroll in a lesson set that has already started')
+  }
+
+  return prisma.$transaction(async (transaction) => {
+    const membership = await getValidMembership(userId, transaction)
+    if (!membership) {
+      throw new ValidationError('No valid membership found. Please purchase a membership to enroll.')
+    }
+
+    const sessionCount = lessonSet.classes.length
+    if (membership.classesRemaining !== null && membership.classesRemaining < sessionCount) {
+      throw new ValidationError(
+        `Not enough class credits. You need ${sessionCount} credits to enroll in this lesson set.`
+      )
+    }
+
+    let allHaveSpace = true
+    for (const session of lessonSet.classes) {
+      const enrolledCount = await transaction.registration.count({
+        where: { classId: session.id, status: 'ENROLLED' },
+      })
+      if (enrolledCount >= session.capacity) {
+        allHaveSpace = false
+        break
+      }
+    }
+
+    const createdRegistrations: Registration[] = []
+
+    for (const session of lessonSet.classes) {
+      if (allHaveSpace) {
+        const registration = await transaction.registration.create({
+          data: { userId, classId: session.id, status: 'ENROLLED', membershipId: membership.id },
+        })
+        createdRegistrations.push(registration)
+      } else {
+        const lastWaitlisted = await transaction.registration.findFirst({
+          where: { classId: session.id, status: 'WAITLISTED' },
+          orderBy: { waitlistPosition: 'desc' },
+        })
+        const waitlistPosition = (lastWaitlisted?.waitlistPosition ?? 0) + 1
+        const registration = await transaction.registration.create({
+          data: { userId, classId: session.id, status: 'WAITLISTED', waitlistPosition },
+        })
+        createdRegistrations.push(registration)
+      }
+    }
+
+    if (allHaveSpace && membership.classesRemaining !== null) {
+      await transaction.membership.update({
+        where: { id: membership.id },
+        data: { classesRemaining: { decrement: sessionCount } },
+      })
+      for (const [index, registration] of createdRegistrations.entries()) {
+        await transaction.membershipTransaction.create({
+          data: {
+            membershipId: membership.id,
+            registrationId: registration.id,
+            delta: -1,
+            balanceAfter: membership.classesRemaining - (index + 1),
+          },
+        })
+      }
+    }
+
+    return createdRegistrations
+  })
+}
+
 export async function cancelLessonSetRegistration(
   lessonSetId: string,
   userId: string
@@ -132,7 +220,8 @@ export async function cancelLessonSetRegistration(
   }
 
   const now = new Date()
-  const hasStarted = lessonSet.classes.length > 0 && lessonSet.classes[0]?.startsAt && lessonSet.classes[0].startsAt <= now
+  const firstSession = lessonSet.classes.at(0)
+  const hasStarted = firstSession !== undefined && firstSession.startsAt <= now
   const classIds = lessonSet.classes.map((session) => session.id)
 
   await prisma.$transaction(async (transaction) => {
