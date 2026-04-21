@@ -57,7 +57,8 @@ const createdClass = {
   status: 'DRAFT',
   description: null,
   location: null,
-  recurringGroupId: null,
+  lessonSetId: null,
+  sessionNumber: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 }
