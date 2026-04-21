@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js'
 import {
   createMembership,
   listMemberships,
+  listMembershipHistory,
   getMembership,
   getValidMembership,
   updateMembership,
@@ -17,6 +18,7 @@ vi.mock('../lib/prisma.js', () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
+      count: vi.fn(),
     },
     membershipTransaction: {
       create: vi.fn(),
@@ -35,6 +37,7 @@ const mockCreate = vi.mocked(prisma.membership.create)
 const mockFindMany = vi.mocked(prisma.membership.findMany)
 const mockFindUnique = vi.mocked(prisma.membership.findUnique)
 const mockUpdate = vi.mocked(prisma.membership.update)
+const mockCount = vi.mocked(prisma.membership.count)
 const mockTransactionCreate = vi.mocked(prisma.membershipTransaction.create)
 const mockTransaction = vi.mocked(prisma.$transaction)
 const mockTriggerFindMany = vi.mocked(prisma.notificationTrigger.findMany)
@@ -658,5 +661,62 @@ describe('cancelMembership', () => {
       data: { status: 'CANCELLED' },
     })
     expect(result.status).toBe('CANCELLED')
+  })
+})
+
+describe('listMembershipHistory', () => {
+  const memberships = [
+    { ...baseMembership, id: 'mem_1', type: 'MONTHLY', createdAt: new Date('2026-04-01') },
+    { ...baseMembership, id: 'mem_2', type: 'CLASS_PACK_5', status: 'EXHAUSTED', createdAt: new Date('2026-02-01') },
+  ]
+
+  beforeEach(() => {
+    mockFindMany.mockResolvedValue(memberships as never)
+    mockCount.mockResolvedValue(12 as never)
+  })
+
+  it('queries with skip and take derived from page and limit', async () => {
+    await listMembershipHistory('user_1', 3, 5)
+
+    expect(mockFindMany).toHaveBeenCalledWith({
+      where: { userId: 'user_1' },
+      orderBy: { createdAt: 'desc' },
+      skip: 10,
+      take: 5,
+    })
+  })
+
+  it('queries count with the same userId filter', async () => {
+    await listMembershipHistory('user_1', 1, 5)
+
+    expect(mockCount).toHaveBeenCalledWith({ where: { userId: 'user_1' } })
+  })
+
+  it('returns data, total, page, and totalPages', async () => {
+    const result = await listMembershipHistory('user_1', 1, 5)
+
+    expect(result).toEqual({
+      data: memberships,
+      total: 12,
+      page: 1,
+      totalPages: 3,
+    })
+  })
+
+  it('rounds totalPages up when total does not divide evenly', async () => {
+    mockCount.mockResolvedValue(11 as never)
+
+    const result = await listMembershipHistory('user_1', 1, 5)
+
+    expect(result.totalPages).toBe(3)
+  })
+
+  it('returns totalPages of 0 when the user has no memberships', async () => {
+    mockFindMany.mockResolvedValue([])
+    mockCount.mockResolvedValue(0 as never)
+
+    const result = await listMembershipHistory('user_1', 1, 5)
+
+    expect(result).toEqual({ data: [], total: 0, page: 1, totalPages: 0 })
   })
 })
