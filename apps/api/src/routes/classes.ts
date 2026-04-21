@@ -25,7 +25,6 @@ const updateClassBodySchema = z.object({
   startsAt: z.coerce.date().optional(),
   durationMinutes: z.number().int().min(1).optional(),
   location: z.string().min(1).optional(),
-  recurringGroupId: z.string().min(1).optional(),
 })
 
 const createClassBodySchema = z.object({
@@ -36,7 +35,6 @@ const createClassBodySchema = z.object({
   startsAt: z.coerce.date(),
   durationMinutes: z.number().int().min(1),
   location: z.string().min(1).optional(),
-  recurringGroupId: z.string().min(1).optional(),
 })
 
 classesRouter.get(
@@ -136,7 +134,6 @@ classesRouter.post(
       startsAt: body.startsAt,
       durationMinutes: body.durationMinutes,
       location: body.location,
-      recurringGroupId: body.recurringGroupId,
     })
 
     res.status(201).json(newClass)

@@ -30,7 +30,8 @@ interface CreateClassInput {
   startsAt: Date
   durationMinutes: number
   location?: string
-  recurringGroupId?: string
+  lessonSetId?: string
+  sessionNumber?: number
 }
 
 export async function listClasses(input: ListClassesInput): Promise<Class[]> {
@@ -76,7 +77,6 @@ interface UpdateClassInput {
   startsAt?: Date
   durationMinutes?: number
   location?: string
-  recurringGroupId?: string
 }
 
 export async function updateClass(
@@ -162,7 +162,8 @@ export async function createClass(input: CreateClassInput): Promise<Class> {
       startsAt: input.startsAt,
       durationMinutes: input.durationMinutes,
       location: input.location,
-      recurringGroupId: input.recurringGroupId,
+      lessonSetId: input.lessonSetId,
+      sessionNumber: input.sessionNumber,
       status: 'ACTIVE',
     },
   })
