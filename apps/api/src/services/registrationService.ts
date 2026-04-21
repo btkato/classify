@@ -51,6 +51,25 @@ export async function enrollStudent(userId: string, classId: string): Promise<Re
   })
 }
 
+export async function listRegistrations(userId: string) {
+  return prisma.registration.findMany({
+    where: { userId },
+    include: {
+      class: {
+        select: {
+          id: true,
+          title: true,
+          startsAt: true,
+          durationMinutes: true,
+          location: true,
+          status: true,
+        },
+      },
+    },
+    orderBy: { class: { startsAt: 'asc' } },
+  })
+}
+
 export async function cancelRegistration(registrationId: string, userId: string): Promise<Registration> {
   return prisma.$transaction(async (transaction) => {
     const registration = await transaction.registration.findUnique({

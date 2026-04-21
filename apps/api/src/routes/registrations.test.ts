@@ -18,6 +18,7 @@ const mockGetAuth = vi.mocked(getAuth)
 
 const mockEnrollStudent = vi.mocked(registrationService.enrollStudent)
 const mockCancelRegistration = vi.mocked(registrationService.cancelRegistration)
+const mockListRegistrations = vi.mocked(registrationService.listRegistrations)
 
 const baseRegistration = {
   id: 'reg_1',
@@ -126,5 +127,47 @@ describe('DELETE /registrations/:id', () => {
       .set('Authorization', 'Bearer token')
 
     expect(mockCancelRegistration).toHaveBeenCalledWith('reg_1', 'user_1')
+  })
+})
+
+describe('GET /registrations', () => {
+  const registrationWithClass = {
+    ...baseRegistration,
+    class: {
+      id: 'class_1',
+      title: 'Morning Yoga',
+      startsAt: new Date('2026-05-01T08:00:00.000Z').toISOString(),
+      durationMinutes: 60,
+      location: 'Studio A',
+      status: 'ACTIVE',
+    },
+  }
+
+  it('returns 401 when not authenticated', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+
+    const response = await request(app).get('/registrations')
+
+    expect(response.status).toBe(401)
+  })
+
+  it('returns 200 with the list of registrations', async () => {
+    mockListRegistrations.mockResolvedValue([registrationWithClass] as never)
+
+    const response = await request(app)
+      .get('/registrations')
+      .set('Authorization', 'Bearer token')
+
+    expect(response.status).toBe(200)
+    expect(response.body).toHaveLength(1)
+    expect(response.body[0]).toMatchObject({ id: 'reg_1', status: 'ENROLLED' })
+  })
+
+  it('calls listRegistrations with the authenticated userId', async () => {
+    mockListRegistrations.mockResolvedValue([registrationWithClass] as never)
+
+    await request(app).get('/registrations').set('Authorization', 'Bearer token')
+
+    expect(mockListRegistrations).toHaveBeenCalledWith('user_1')
   })
 })

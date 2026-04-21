@@ -2,7 +2,7 @@ import express from 'express'
 import { z } from 'zod'
 import { requireAuth } from '../middleware/requireAuth.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
-import { enrollStudent, cancelRegistration } from '../services/registrationService.js'
+import { enrollStudent, cancelRegistration, listRegistrations } from '../services/registrationService.js'
 
 export const registrationsRouter = express.Router()
 
@@ -11,6 +11,22 @@ const createRegistrationBodySchema = z.object({
 })
 
 const registrationParamsSchema = z.object({ id: z.string().min(1) })
+
+registrationsRouter.get(
+  '/',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const userId = req.auth?.userId
+
+    if (!userId) {
+      res.status(401).json({ error: { message: 'Unauthorized' } })
+      return
+    }
+
+    const registrations = await listRegistrations(userId)
+    res.status(200).json(registrations)
+  })
+)
 
 registrationsRouter.post(
   '/',
