@@ -83,6 +83,14 @@ export async function cancelRegistration(registrationId: string, userId: string)
       throw new ValidationError('Cannot cancel a completed registration')
     }
 
+    const foundClass = await transaction.class.findUnique({
+      where: { id: registration.classId },
+      select: { lessonSet: { select: { enrollmentType: true } } },
+    })
+    if (foundClass?.lessonSet?.enrollmentType === 'FULL_SET') {
+      throw new ValidationError('This class is part of a lesson set. Cancel the lesson set instead.')
+    }
+
     const cancelled = await transaction.registration.update({
       where: { id: registrationId },
       data: { status: 'CANCELLED', waitlistPosition: null },
