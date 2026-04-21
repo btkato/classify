@@ -10,6 +10,7 @@ export interface Class {
   categoryId: string
   instructorId: string
   capacity: number
+  enrolledCount: number
   startsAt: string
   durationMinutes: number
   location: string | null
