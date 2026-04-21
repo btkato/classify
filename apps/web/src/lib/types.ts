@@ -19,6 +19,18 @@ export interface RegistrationWithClass {
   class: ClassSummary
 }
 
+export interface Membership {
+  id: string
+  type: string
+  status: string
+  expiresAt: string | null
+  classesRemaining: number | null
+  classesTotal: number | null
+  priority: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface ClassCategory {
   id: string
   name: string
