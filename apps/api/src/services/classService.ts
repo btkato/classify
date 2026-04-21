@@ -95,6 +95,11 @@ export async function updateClass(
     throw new ForbiddenError('You do not have permission to update this class')
   }
 
+  const adminOnlyFields: (keyof UpdateClassInput)[] = ['title', 'capacity', 'startsAt', 'durationMinutes']
+  if (!isAdmin && adminOnlyFields.some((field) => input[field] !== undefined)) {
+    throw new ForbiddenError('Instructors may only update description and location')
+  }
+
   if (input.startsAt !== undefined && input.startsAt <= new Date()) {
     throw new ValidationError('Class must start in the future')
   }

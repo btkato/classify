@@ -115,7 +115,7 @@ classesRouter.delete(
 classesRouter.post(
   '/',
   requireAuth,
-  requireRoles(['INSTRUCTOR', 'ADMIN']),
+  requireRoles(['ADMIN']),
   asyncHandler(async (req, res) => {
     const body = createClassBodySchema.parse(req.body)
     const userId = req.auth?.userId
