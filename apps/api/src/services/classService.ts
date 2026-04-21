@@ -47,14 +47,26 @@ export async function listClasses(input: ListClassesInput): Promise<Class[]> {
   })
 }
 
-export async function getClass(id: string): Promise<Class> {
-  const foundClass = await prisma.class.findUnique({ where: { id } })
+export type ClassWithEnrolledCount = Class & { enrolledCount: number }
+
+export async function getClass(id: string): Promise<ClassWithEnrolledCount> {
+  const foundClass = await prisma.class.findUnique({
+    where: { id },
+    include: {
+      _count: {
+        select: {
+          registrations: { where: { status: 'ENROLLED' } },
+        },
+      },
+    },
+  })
 
   if (!foundClass) {
     throw new NotFoundError('Class not found')
   }
 
-  return foundClass
+  const { _count, ...rest } = foundClass
+  return { ...rest, enrolledCount: _count.registrations }
 }
 
 interface UpdateClassInput {
