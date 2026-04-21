@@ -147,6 +147,31 @@ export async function updateMembership(id: string, input: UpdateMembershipInput)
 
 type PrismaOrTransaction = typeof prisma | Prisma.TransactionClient
 
+export async function cancelMembership(id: string, userId: string): Promise<Membership> {
+  const membership = await prisma.membership.findUnique({ where: { id } })
+
+  if (!membership) {
+    throw new NotFoundError('Membership not found')
+  }
+
+  if (membership.userId !== userId) {
+    throw new ForbiddenError('You do not have permission to cancel this membership')
+  }
+
+  if (membership.type !== 'CONTINUOUS_MONTHLY') {
+    throw new ValidationError('Only CONTINUOUS_MONTHLY memberships can be self-cancelled')
+  }
+
+  if (membership.status !== 'ACTIVE') {
+    throw new ValidationError('Only ACTIVE memberships can be cancelled')
+  }
+
+  return prisma.membership.update({
+    where: { id },
+    data: { status: 'CANCELLED' },
+  })
+}
+
 export async function getValidMembership(
   userId: string,
   db: PrismaOrTransaction = prisma

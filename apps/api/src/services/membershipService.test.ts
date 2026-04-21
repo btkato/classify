@@ -6,6 +6,7 @@ import {
   getMembership,
   getValidMembership,
   updateMembership,
+  cancelMembership,
 } from './membershipService.js'
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js'
 
@@ -609,5 +610,53 @@ describe('updateMembership', () => {
     } as never)
 
     await expect(updateMembership('mem_1', { classesRemaining: 5 })).rejects.toThrow(ValidationError)
+  })
+})
+
+describe('cancelMembership', () => {
+  const continuousMonthly = {
+    ...baseMembership,
+    type: 'CONTINUOUS_MONTHLY' as const,
+    priority: 1,
+    classesTotal: null,
+    classesRemaining: null,
+    expiresAt: new Date('2026-05-21T00:00:00.000Z'),
+  }
+
+  beforeEach(() => {
+    mockFindUnique.mockResolvedValue(continuousMonthly as never)
+    mockUpdate.mockResolvedValue({ ...continuousMonthly, status: 'CANCELLED' } as never)
+  })
+
+  it('throws NotFoundError when the membership does not exist', async () => {
+    mockFindUnique.mockResolvedValue(null)
+
+    await expect(cancelMembership('mem_1', 'user_1')).rejects.toThrow(NotFoundError)
+  })
+
+  it('throws ForbiddenError when the requester is not the owner', async () => {
+    await expect(cancelMembership('mem_1', 'other_user')).rejects.toThrow(ForbiddenError)
+  })
+
+  it('throws ValidationError when the membership type is not CONTINUOUS_MONTHLY', async () => {
+    mockFindUnique.mockResolvedValue({ ...continuousMonthly, type: 'MONTHLY' } as never)
+
+    await expect(cancelMembership('mem_1', 'user_1')).rejects.toThrow(ValidationError)
+  })
+
+  it('throws ValidationError when the membership is not ACTIVE', async () => {
+    mockFindUnique.mockResolvedValue({ ...continuousMonthly, status: 'CANCELLED' } as never)
+
+    await expect(cancelMembership('mem_1', 'user_1')).rejects.toThrow(ValidationError)
+  })
+
+  it('sets status to CANCELLED for a valid owned CONTINUOUS_MONTHLY membership', async () => {
+    const result = await cancelMembership('mem_1', 'user_1')
+
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: 'mem_1' },
+      data: { status: 'CANCELLED' },
+    })
+    expect(result.status).toBe('CANCELLED')
   })
 })
