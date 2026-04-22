@@ -24,7 +24,7 @@ vi.mock('../lib/prisma.js', () => ({
       updateMany: vi.fn(),
     },
     registration: {
-      count: vi.fn(),
+      groupBy: vi.fn(),
       create: vi.fn(),
       findFirst: vi.fn(),
       findMany: vi.fn(),
@@ -49,7 +49,7 @@ const mockLessonSetFindUnique = vi.mocked(prisma.lessonSet.findUnique)
 const mockLessonSetUpdate = vi.mocked(prisma.lessonSet.update)
 const mockClassCreate = vi.mocked(prisma.class.create)
 const mockClassUpdateMany = vi.mocked(prisma.class.updateMany)
-const mockRegistrationCount = vi.mocked(prisma.registration.count)
+const mockRegistrationGroupBy = vi.mocked(prisma.registration.groupBy)
 const mockRegistrationCreate = vi.mocked(prisma.registration.create)
 const mockRegistrationFindFirst = vi.mocked(prisma.registration.findFirst)
 const mockRegistrationFindMany = vi.mocked(prisma.registration.findMany)
@@ -525,7 +525,10 @@ describe('enrollInLessonSet', () => {
   describe('all sessions have space', () => {
     beforeEach(() => {
       mockLessonSetFindUnique.mockResolvedValue(fullSetWithSessions as never)
-      mockRegistrationCount.mockResolvedValue(5)
+      mockRegistrationGroupBy.mockResolvedValue([
+        { classId: 'cls_1', _count: { _all: 5 } },
+        { classId: 'cls_2', _count: { _all: 5 } },
+      ] as never)
       mockRegistrationCreate.mockResolvedValueOnce({ id: 'reg_1', classId: 'cls_1', status: 'ENROLLED' } as never)
       mockRegistrationCreate.mockResolvedValueOnce({ id: 'reg_2', classId: 'cls_2', status: 'ENROLLED' } as never)
     })
@@ -578,7 +581,9 @@ describe('enrollInLessonSet', () => {
     beforeEach(() => {
       mockLessonSetFindUnique.mockResolvedValue(fullSetWithSessions as never)
       mockMembershipFindMany.mockResolvedValue([timeMembership] as never)
-      mockRegistrationCount.mockResolvedValueOnce(10)
+      mockRegistrationGroupBy.mockResolvedValue([
+        { classId: 'cls_1', _count: { _all: 10 } },
+      ] as never)
       mockRegistrationFindFirst.mockResolvedValue(null)
       mockRegistrationCreate
         .mockResolvedValueOnce({ id: 'reg_1', classId: 'cls_1', status: 'WAITLISTED', waitlistPosition: 1 } as never)
