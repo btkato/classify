@@ -237,17 +237,26 @@ export async function cancelLessonSetRegistration(
   const classIds = lessonSet.classes.map((session) => session.id)
 
   await prisma.$transaction(async (transaction) => {
-    const enrolledRegistrations = await transaction.registration.findMany({
-      where: { classId: { in: classIds }, userId, status: 'ENROLLED' },
+    const registrations = await transaction.registration.findMany({
+      where: { classId: { in: classIds }, userId, status: { in: ['ENROLLED', 'WAITLISTED'] } },
       include: { class: { select: { startsAt: true } }, membership: true },
     })
 
     const registrationsToCancel = hasStarted
-      ? enrolledRegistrations.filter((registration) => registration.class.startsAt > now)
-      : enrolledRegistrations
+      ? registrations.filter((registration) => registration.class.startsAt > now)
+      : registrations
 
     for (const registration of registrationsToCancel) {
-      if (
+      if (registration.status === 'WAITLISTED') {
+        await transaction.registration.updateMany({
+          where: {
+            classId: registration.classId,
+            status: 'WAITLISTED',
+            waitlistPosition: { gt: registration.waitlistPosition ?? 0 },
+          },
+          data: { waitlistPosition: { decrement: 1 } },
+        })
+      } else if (
         !hasStarted &&
         registration.membershipId !== null &&
         registration.membership !== null &&
@@ -269,21 +278,8 @@ export async function cancelLessonSetRegistration(
 
       await transaction.registration.update({
         where: { id: registration.id },
-        data: { status: 'CANCELLED' },
+        data: { status: 'CANCELLED', waitlistPosition: null },
       })
-    }
-
-    if (hasStarted) {
-      const futureClassIds = lessonSet.classes
-        .filter((session) => session.startsAt > now)
-        .map((session) => session.id)
-
-      if (futureClassIds.length > 0) {
-        await transaction.registration.updateMany({
-          where: { classId: { in: futureClassIds }, status: 'WAITLISTED' },
-          data: { status: 'CANCELLED' },
-        })
-      }
     }
   })
 }

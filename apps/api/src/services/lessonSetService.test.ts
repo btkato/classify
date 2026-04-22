@@ -304,11 +304,11 @@ describe('cancelLessonSetRegistration', () => {
       expect(mockRegistrationUpdate).toHaveBeenCalledTimes(2)
       expect(mockRegistrationUpdate).toHaveBeenCalledWith({
         where: { id: 'reg_1' },
-        data: { status: 'CANCELLED' },
+        data: { status: 'CANCELLED', waitlistPosition: null },
       })
       expect(mockRegistrationUpdate).toHaveBeenCalledWith({
         where: { id: 'reg_2' },
-        data: { status: 'CANCELLED' },
+        data: { status: 'CANCELLED', waitlistPosition: null },
       })
     })
 
@@ -332,6 +332,50 @@ describe('cancelLessonSetRegistration', () => {
           data: { classesRemaining: { increment: 1 } },
         })
       )
+    })
+
+    it('cancels WAITLISTED registrations for the student', async () => {
+      const registrations = [
+        { id: 'reg_1', classId: 'cls_1', status: 'WAITLISTED', waitlistPosition: 2,
+          membershipId: null, membership: null, class: { startsAt: session1StartsAt } },
+      ]
+      mockRegistrationFindMany.mockResolvedValue(registrations as never)
+
+      await cancelLessonSetRegistration('ls_1', 'user_1')
+
+      expect(mockRegistrationUpdate).toHaveBeenCalledWith({
+        where: { id: 'reg_1' },
+        data: { status: 'CANCELLED', waitlistPosition: null },
+      })
+    })
+
+    it('compacts the waitlist when cancelling a WAITLISTED registration', async () => {
+      const registrations = [
+        { id: 'reg_1', classId: 'cls_1', status: 'WAITLISTED', waitlistPosition: 2,
+          membershipId: null, membership: null, class: { startsAt: session1StartsAt } },
+      ]
+      mockRegistrationFindMany.mockResolvedValue(registrations as never)
+
+      await cancelLessonSetRegistration('ls_1', 'user_1')
+
+      expect(mockRegistrationUpdateMany).toHaveBeenCalledWith({
+        where: { classId: 'cls_1', status: 'WAITLISTED', waitlistPosition: { gt: 2 } },
+        data: { waitlistPosition: { decrement: 1 } },
+      })
+    })
+
+    it('does not refund credits for a WAITLISTED registration backed by a pack', async () => {
+      const packMembership = { id: 'mem_1', classesRemaining: 4, classesTotal: 5 }
+      const registrations = [
+        { id: 'reg_1', classId: 'cls_1', status: 'WAITLISTED', waitlistPosition: 1,
+          membershipId: 'mem_1', membership: packMembership, class: { startsAt: session1StartsAt } },
+      ]
+      mockRegistrationFindMany.mockResolvedValue(registrations as never)
+
+      await cancelLessonSetRegistration('ls_1', 'user_1')
+
+      expect(mockMembershipUpdate).not.toHaveBeenCalled()
+      expect(mockMembershipTransactionCreate).not.toHaveBeenCalled()
     })
 
     it('does not write a refund for a time-based membership', async () => {
@@ -376,7 +420,7 @@ describe('cancelLessonSetRegistration', () => {
       expect(mockRegistrationUpdate).toHaveBeenCalledTimes(1)
       expect(mockRegistrationUpdate).toHaveBeenCalledWith({
         where: { id: 'reg_2' },
-        data: { status: 'CANCELLED' },
+        data: { status: 'CANCELLED', waitlistPosition: null },
       })
     })
 
@@ -394,17 +438,22 @@ describe('cancelLessonSetRegistration', () => {
       expect(mockMembershipTransactionCreate).not.toHaveBeenCalled()
     })
 
-    it('clears all waitlisted registrations for future sessions', async () => {
-      mockRegistrationFindMany.mockResolvedValue([] as never)
+    it('cancels WAITLISTED registrations for future sessions and compacts the waitlist', async () => {
+      const registrations = [
+        { id: 'reg_1', classId: 'cls_2', status: 'WAITLISTED', waitlistPosition: 1,
+          membershipId: null, membership: null, class: { startsAt: futureSession } },
+      ]
+      mockRegistrationFindMany.mockResolvedValue(registrations as never)
 
       await cancelLessonSetRegistration('ls_1', 'user_1')
 
       expect(mockRegistrationUpdateMany).toHaveBeenCalledWith({
-        where: {
-          classId: { in: ['cls_2'] },
-          status: 'WAITLISTED',
-        },
-        data: { status: 'CANCELLED' },
+        where: { classId: 'cls_2', status: 'WAITLISTED', waitlistPosition: { gt: 1 } },
+        data: { waitlistPosition: { decrement: 1 } },
+      })
+      expect(mockRegistrationUpdate).toHaveBeenCalledWith({
+        where: { id: 'reg_1' },
+        data: { status: 'CANCELLED', waitlistPosition: null },
       })
     })
 
