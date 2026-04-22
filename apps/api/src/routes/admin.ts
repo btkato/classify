@@ -1,6 +1,6 @@
 import express from 'express'
 import { z } from 'zod'
-import { Role } from 'db'
+import { Role, MembershipStatus } from 'db'
 import { requireAuth } from '../middleware/requireAuth.js'
 import { requireRoles } from '../middleware/requireRoles.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
@@ -39,6 +39,7 @@ const updateRoleBodySchema = z.object({
 const listMembershipsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).default(20),
+  status: z.nativeEnum(MembershipStatus).optional(),
 })
 
 adminRouter.get(
@@ -46,8 +47,8 @@ adminRouter.get(
   requireAuth,
   requireRoles(['ADMIN']),
   asyncHandler(async (req, res) => {
-    const query = listMembershipsQuerySchema.parse(req.query)
-    const result = await listAllMemberships(query)
+    const { page, pageSize, status } = listMembershipsQuerySchema.parse(req.query)
+    const result = await listAllMemberships({ page, pageSize, status })
     res.status(200).json(result)
   })
 )

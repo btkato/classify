@@ -12,6 +12,7 @@ export default function Navbar() {
   const { data: currentUser } = useCurrentUser()
 
   const isInstructor = currentUser?.roles.some((r) => r.role === 'INSTRUCTOR') ?? false
+  const isAdmin = currentUser?.roles.some((r) => r.role === 'ADMIN') ?? false
 
   function handleSignOut() {
     queryClient.removeQueries({ queryKey: ['current-user'] })
@@ -59,6 +60,14 @@ export default function Navbar() {
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Instructor
+                </Link>
+              )}
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Admin
                 </Link>
               )}
               <span className="text-sm font-medium">

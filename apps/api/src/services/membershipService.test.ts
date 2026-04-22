@@ -755,4 +755,23 @@ describe('listAllMemberships', () => {
       expect.objectContaining({ where: expect.objectContaining({ userId: expect.anything() }) })
     )
   })
+
+  it('filters by status when provided', async () => {
+    mockCount.mockResolvedValue(1 as never)
+
+    await listAllMemberships({ page: 1, pageSize: 20, status: 'ACTIVE' })
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { status: 'ACTIVE' } })
+    )
+    expect(mockCount).toHaveBeenCalledWith({ where: { status: 'ACTIVE' } })
+  })
+
+  it('does not apply a status where clause when status is not provided', async () => {
+    await listAllMemberships({ page: 1, pageSize: 20 })
+
+    expect(mockFindMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ status: expect.anything() }) })
+    )
+  })
 })
