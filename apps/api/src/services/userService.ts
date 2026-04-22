@@ -86,3 +86,43 @@ export async function adminUpdateUser(id: string, data: AdminUpdateUserInput): P
     dateOfBirth: data.dateOfBirth,
   })
 }
+
+interface ListUsersInput {
+  page: number
+  pageSize: number
+  search?: string
+}
+
+export interface UserPage {
+  data: UserWithRoles[]
+  total: number
+  page: number
+  totalPages: number
+}
+
+export async function listUsers(input: ListUsersInput): Promise<UserPage> {
+  const skip = (input.page - 1) * input.pageSize
+
+  const where: Prisma.UserWhereInput = input.search
+    ? {
+        OR: [
+          { firstName: { contains: input.search, mode: 'insensitive' } },
+          { lastName: { contains: input.search, mode: 'insensitive' } },
+          { email: { contains: input.search, mode: 'insensitive' } },
+        ],
+      }
+    : {}
+
+  const [data, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      include: { roles: true },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: input.pageSize,
+    }),
+    prisma.user.count({ where }),
+  ])
+
+  return { data, total, page: input.page, totalPages: Math.ceil(total / input.pageSize) }
+}

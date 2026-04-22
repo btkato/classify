@@ -24,17 +24,23 @@ vi.mock('../services/membershipService.js', () => ({
   updateMembership: vi.fn(),
 }))
 
+vi.mock('../services/userService.js', () => ({
+  listUsers: vi.fn(),
+}))
+
 import { app } from '../app.js'
 import { getAuth } from '@clerk/express'
 import { prisma } from '../lib/prisma.js'
 import * as roleService from '../services/roleService.js'
 import * as membershipService from '../services/membershipService.js'
+import * as userService from '../services/userService.js'
 
 const mockGetAuth = vi.mocked(getAuth)
 const mockFindMany = vi.mocked(prisma.userRole.findMany)
 const mockGrantRole = vi.mocked(roleService.grantRole)
 const mockRevokeRole = vi.mocked(roleService.revokeRole)
 const mockUpdateMembership = vi.mocked(membershipService.updateMembership)
+const mockListUsers = vi.mocked(userService.listUsers)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -230,6 +236,63 @@ describe('PATCH /admin/memberships/:id', () => {
         .send({ status: 'PAUSED' })
 
       expect(res.status).toBe(404)
+    })
+  })
+})
+
+describe('GET /admin/users', () => {
+  const userPage = {
+    data: [{ id: 'user_1', firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com', roles: [{ role: 'STUDENT' }] }],
+    total: 1,
+    page: 1,
+    totalPages: 1,
+  }
+
+  beforeEach(() => {
+    mockListUsers.mockResolvedValue(userPage as never)
+  })
+
+  describe('authentication and authorisation', () => {
+    it('returns 401 when not authenticated', async () => {
+      mockGetAuth.mockReturnValue({ userId: null } as never)
+
+      const res = await request(app).get('/admin/users')
+
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 403 when authenticated as STUDENT', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'STUDENT' }] as never)
+
+      const res = await request(app).get('/admin/users')
+
+      expect(res.status).toBe(403)
+    })
+  })
+
+  describe('success', () => {
+    it('returns 200 with paginated user list', async () => {
+      const res = await request(app).get('/admin/users')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ total: 1, page: 1, totalPages: 1 })
+      expect(res.body.data).toHaveLength(1)
+    })
+
+    it('passes page and pageSize query params to listUsers', async () => {
+      await request(app).get('/admin/users?page=2&pageSize=5')
+
+      expect(mockListUsers).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 2, pageSize: 5 })
+      )
+    })
+
+    it('passes search query param to listUsers', async () => {
+      await request(app).get('/admin/users?search=jane')
+
+      expect(mockListUsers).toHaveBeenCalledWith(
+        expect.objectContaining({ search: 'jane' })
+      )
     })
   })
 })
