@@ -15,6 +15,7 @@ import InstructorClassListPage from './pages/InstructorClassListPage'
 import InstructorClassDetailPage from './pages/InstructorClassDetailPage'
 import InstructorRosterPage from './pages/InstructorRosterPage'
 import AdminDashboard from './pages/AdminDashboard'
+import AdminCategoryPage from './pages/AdminCategoryPage'
 
 const locationStateSchema = z.object({ from: z.object({ pathname: z.string() }) }).nullable()
 
@@ -115,6 +116,17 @@ export default function App() {
             <ProtectedRoute>
               <RoleProtectedRoute role="ADMIN">
                 <AdminDashboard />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/categories"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="ADMIN">
+                <AdminCategoryPage />
               </RoleProtectedRoute>
             </ProtectedRoute>
           }
