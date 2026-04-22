@@ -26,7 +26,7 @@ const mockCreateLessonSet = vi.mocked(lessonSetService.createLessonSet)
 const mockListLessonSets = vi.mocked(lessonSetService.listLessonSets)
 const mockGetLessonSet = vi.mocked(lessonSetService.getLessonSet)
 const mockUpdateLessonSet = vi.mocked(lessonSetService.updateLessonSet)
-const mockDeleteLessonSet = vi.mocked(lessonSetService.deleteLessonSet)
+const mockCancelLessonSet = vi.mocked(lessonSetService.cancelLessonSet)
 
 const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
@@ -242,7 +242,7 @@ describe('DELETE /lesson-sets/:id', () => {
 
   it('returns 200 with the cancelled lesson set', async () => {
     const cancelled = { ...lessonSetRecord, status: 'CANCELLED' }
-    mockDeleteLessonSet.mockResolvedValue(cancelled as never)
+    mockCancelLessonSet.mockResolvedValue(cancelled as never)
 
     const response = await request(app)
       .delete('/lesson-sets/ls_1')
@@ -253,12 +253,12 @@ describe('DELETE /lesson-sets/:id', () => {
   })
 
   it('calls deleteLessonSet with the id', async () => {
-    mockDeleteLessonSet.mockResolvedValue({ ...lessonSetRecord, status: 'CANCELLED' } as never)
+    mockCancelLessonSet.mockResolvedValue({ ...lessonSetRecord, status: 'CANCELLED' } as never)
 
     await request(app)
       .delete('/lesson-sets/ls_1')
       .set('Authorization', 'Bearer token')
 
-    expect(mockDeleteLessonSet).toHaveBeenCalledWith('ls_1')
+    expect(mockCancelLessonSet).toHaveBeenCalledWith('ls_1')
   })
 })
