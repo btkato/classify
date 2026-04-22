@@ -1,18 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prisma } from '../lib/prisma.js'
-import { createCategory, listCategories } from './classCategoryService.js'
+import { createCategory, listCategories, deleteCategory } from './classCategoryService.js'
 
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
     classCategory: {
       create: vi.fn(),
       findMany: vi.fn(),
+      delete: vi.fn(),
     },
   },
 }))
 
 const mockCreate = vi.mocked(prisma.classCategory.create)
 const mockFindMany = vi.mocked(prisma.classCategory.findMany)
+const mockDelete = vi.mocked(prisma.classCategory.delete)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -42,5 +44,17 @@ describe('listCategories', () => {
 
     expect(mockFindMany).toHaveBeenCalledWith({ orderBy: { name: 'asc' } })
     expect(result).toEqual(categories)
+  })
+})
+
+describe('deleteCategory', () => {
+  it('calls prisma.classCategory.delete with the given id and returns the result', async () => {
+    const category = { id: 'cat_1', name: 'Yoga', createdAt: new Date() }
+    mockDelete.mockResolvedValue(category as never)
+
+    const result = await deleteCategory('cat_1')
+
+    expect(mockDelete).toHaveBeenCalledWith({ where: { id: 'cat_1' } })
+    expect(result).toEqual(category)
   })
 })
