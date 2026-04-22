@@ -1,10 +1,18 @@
 import { Link } from 'react-router-dom'
-import { useAuth, useUser } from '@clerk/clerk-react'
+import { useAuth, useUser, useClerk } from '@clerk/clerk-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 
 export default function Navbar() {
   const { isSignedIn } = useAuth()
   const { user } = useUser()
+  const { signOut } = useClerk()
+  const queryClient = useQueryClient()
+
+  function handleSignOut() {
+    queryClient.removeQueries({ queryKey: ['current-user'] })
+    void signOut()
+  }
 
   return (
     <header className="border-b border-border bg-background">
@@ -44,6 +52,9 @@ export default function Navbar() {
               <span className="text-sm font-medium">
                 {user?.firstName ?? user?.emailAddresses[0]?.emailAddress}
               </span>
+              <Button size="sm" variant="outline" onClick={handleSignOut}>
+                Sign Out
+              </Button>
             </>
           ) : (
             <Button asChild size="sm">
