@@ -50,10 +50,12 @@ export async function createLessonSet(input: CreateLessonSetInput): Promise<Less
       },
     })
 
+    const overridesBySession = new Map(
+      input.sessionOverrides?.map((override) => [override.sessionNumber, override]) ?? []
+    )
+
     for (let sessionIndex = 1; sessionIndex <= input.totalSessions; sessionIndex++) {
-      const override = input.sessionOverrides?.find(
-        (sessionOverride) => sessionOverride.sessionNumber === sessionIndex
-      )
+      const override = overridesBySession.get(sessionIndex)
       const defaultStartsAt = new Date(
         input.firstSessionStartsAt.getTime() +
           (sessionIndex - 1) * input.intervalDays * MS_PER_DAY
