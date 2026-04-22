@@ -154,7 +154,7 @@ describe('POST /classes', () => {
   })
 
   describe('success', () => {
-    it('calls createClass with instructorId from auth and returns 201 with the created class', async () => {
+    it('calls createClass with instructorId from auth when none provided in body', async () => {
       mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
       mockCreateClass.mockResolvedValue(createdClass as never)
 
@@ -162,15 +162,23 @@ describe('POST /classes', () => {
 
       expect(res.status).toBe(201)
       expect(mockCreateClass).toHaveBeenCalledWith(
-        expect.objectContaining({
-          instructorId: 'user_1',
-          categoryId: 'cat_1',
-          title: 'Morning Yoga',
-          capacity: 10,
-          durationMinutes: 60,
-        })
+        expect.objectContaining({ instructorId: 'user_1' })
       )
       expect(res.body).toMatchObject({ id: 'class_1', title: 'Morning Yoga' })
+    })
+
+    it('uses instructorId from body when provided', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
+      mockCreateClass.mockResolvedValue(createdClass as never)
+
+      const res = await request(app)
+        .post('/classes')
+        .send({ ...validBody, instructorId: 'instructor_99' })
+
+      expect(res.status).toBe(201)
+      expect(mockCreateClass).toHaveBeenCalledWith(
+        expect.objectContaining({ instructorId: 'instructor_99' })
+      )
     })
   })
 

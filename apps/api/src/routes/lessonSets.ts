@@ -15,6 +15,7 @@ import {
 export const lessonSetsRouter = express.Router()
 
 const createLessonSetBodySchema = z.object({
+  instructorId: z.string().min(1).optional(),
   title: z.string().min(1),
   description: z.string().min(1).optional(),
   enrollmentType: z.nativeEnum(EnrollmentType),
@@ -74,7 +75,7 @@ lessonSetsRouter.post(
       return
     }
 
-    const lessonSet = await createLessonSet({ ...body, instructorId: userId })
+    const lessonSet = await createLessonSet({ ...body, instructorId: body.instructorId ?? userId })
     res.status(201).json(lessonSet)
   })
 )
