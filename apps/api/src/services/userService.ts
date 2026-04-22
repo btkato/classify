@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js'
 import { NotFoundError } from '../lib/errors.js'
-import type { Prisma } from 'db'
+import type { Prisma, Role } from 'db'
 
 type UserWithRoles = Prisma.UserGetPayload<{ include: { roles: true } }>
 
@@ -91,6 +91,7 @@ interface ListUsersInput {
   page: number
   pageSize: number
   search?: string
+  role?: Role
 }
 
 export interface UserPage {
@@ -103,15 +104,23 @@ export interface UserPage {
 export async function listUsers(input: ListUsersInput): Promise<UserPage> {
   const skip = (input.page - 1) * input.pageSize
 
-  const where: Prisma.UserWhereInput = input.search
-    ? {
-        OR: [
-          { firstName: { contains: input.search, mode: 'insensitive' } },
-          { lastName: { contains: input.search, mode: 'insensitive' } },
-          { email: { contains: input.search, mode: 'insensitive' } },
-        ],
-      }
-    : {}
+  const conditions: Prisma.UserWhereInput[] = []
+
+  if (input.role) {
+    conditions.push({ roles: { some: { role: input.role } } })
+  }
+
+  if (input.search) {
+    conditions.push({
+      OR: [
+        { firstName: { contains: input.search, mode: 'insensitive' } },
+        { lastName: { contains: input.search, mode: 'insensitive' } },
+        { email: { contains: input.search, mode: 'insensitive' } },
+      ],
+    })
+  }
+
+  const where: Prisma.UserWhereInput = conditions.length > 0 ? { AND: conditions } : {}
 
   const [data, total] = await Promise.all([
     prisma.user.findMany({

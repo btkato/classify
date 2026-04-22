@@ -147,17 +147,31 @@ describe('listUsers', () => {
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          OR: [
-            { firstName: { contains: 'yoga', mode: 'insensitive' } },
-            { lastName: { contains: 'yoga', mode: 'insensitive' } },
-            { email: { contains: 'yoga', mode: 'insensitive' } },
+          AND: [
+            {
+              OR: [
+                { firstName: { contains: 'yoga', mode: 'insensitive' } },
+                { lastName: { contains: 'yoga', mode: 'insensitive' } },
+                { email: { contains: 'yoga', mode: 'insensitive' } },
+              ],
+            },
           ],
         },
       })
     )
   })
 
-  it('uses empty where clause when no search term is provided', async () => {
+  it('filters by role when provided', async () => {
+    await listUsers({ page: 1, pageSize: 10, role: 'INSTRUCTOR' as never })
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { AND: [{ roles: { some: { role: 'INSTRUCTOR' } } }] },
+      })
+    )
+  })
+
+  it('uses empty where clause when no filters are provided', async () => {
     await listUsers({ page: 1, pageSize: 10 })
 
     expect(mockCount).toHaveBeenCalledWith(expect.objectContaining({ where: {} }))

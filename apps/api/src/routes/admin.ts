@@ -14,6 +14,7 @@ const listUsersQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).default(20),
   search: z.string().min(1).optional(),
+  role: z.nativeEnum(Role).optional(),
 })
 
 adminRouter.get(
