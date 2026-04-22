@@ -105,7 +105,7 @@ export async function updateLessonSet(id: string, input: UpdateLessonSetInput): 
   })
 }
 
-export async function deleteLessonSet(id: string): Promise<LessonSet> {
+export async function cancelLessonSet(id: string): Promise<LessonSet> {
   return prisma.$transaction(async (transaction) => {
     await transaction.class.updateMany({
       where: { lessonSetId: id },

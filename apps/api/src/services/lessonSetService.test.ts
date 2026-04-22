@@ -5,7 +5,7 @@ import {
   listLessonSets,
   getLessonSet,
   updateLessonSet,
-  deleteLessonSet,
+  cancelLessonSet,
   cancelLessonSetRegistration,
   enrollInLessonSet,
 } from './lessonSetService.js'
@@ -91,8 +91,6 @@ const lessonSetRecord = {
   createdAt: new Date(),
   updatedAt: new Date(),
 }
-
-// ─── createLessonSet ──────────────────────────────────────────────────────────
 
 describe('createLessonSet', () => {
   beforeEach(() => {
@@ -192,8 +190,6 @@ describe('createLessonSet', () => {
   })
 })
 
-// ─── listLessonSets ───────────────────────────────────────────────────────────
-
 describe('listLessonSets', () => {
   it('returns all lesson sets ordered by createdAt descending', async () => {
     mockLessonSetFindMany.mockResolvedValue([lessonSetRecord] as never)
@@ -206,8 +202,6 @@ describe('listLessonSets', () => {
     expect(result).toEqual([lessonSetRecord])
   })
 })
-
-// ─── getLessonSet ─────────────────────────────────────────────────────────────
 
 describe('getLessonSet', () => {
   it('returns the lesson set with sessions ordered by sessionNumber asc', async () => {
@@ -230,8 +224,6 @@ describe('getLessonSet', () => {
   })
 })
 
-// ─── updateLessonSet ──────────────────────────────────────────────────────────
-
 describe('updateLessonSet', () => {
   it('updates the lesson set and returns the result', async () => {
     const updated = { ...lessonSetRecord, title: 'Updated Title' }
@@ -247,14 +239,12 @@ describe('updateLessonSet', () => {
   })
 })
 
-// ─── deleteLessonSet (admin cancel) ───────────────────────────────────────────
-
-describe('deleteLessonSet', () => {
+describe('cancelLessonSet', () => {
   it('cancels the lesson set and all its classes inside a transaction', async () => {
     mockLessonSetUpdate.mockResolvedValue({ ...lessonSetRecord, status: 'CANCELLED' } as never)
     mockClassUpdateMany.mockResolvedValue({ count: 3 } as never)
 
-    await deleteLessonSet('ls_1')
+    await cancelLessonSet('ls_1')
 
     expect(mockTransaction).toHaveBeenCalledOnce()
     expect(mockLessonSetUpdate).toHaveBeenCalledWith({
@@ -272,13 +262,11 @@ describe('deleteLessonSet', () => {
     mockLessonSetUpdate.mockResolvedValue(cancelled as never)
     mockClassUpdateMany.mockResolvedValue({ count: 3 } as never)
 
-    const result = await deleteLessonSet('ls_1')
+    const result = await cancelLessonSet('ls_1')
 
     expect(result).toEqual(cancelled)
   })
 })
-
-// ─── cancelLessonSetRegistration (student cancel) ────────────────────────────
 
 describe('cancelLessonSetRegistration', () => {
   const session1StartsAt = new Date(Date.now() + 7 * msPerDay)
@@ -436,8 +424,6 @@ describe('cancelLessonSetRegistration', () => {
     })
   })
 })
-
-// ─── enrollInLessonSet (student enroll in full set) ───────────────────────────
 
 describe('enrollInLessonSet', () => {
   const session1StartsAt = new Date(Date.now() + 7 * msPerDay)

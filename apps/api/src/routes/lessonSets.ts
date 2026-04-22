@@ -9,7 +9,7 @@ import {
   listLessonSets,
   getLessonSet,
   updateLessonSet,
-  deleteLessonSet,
+  cancelLessonSet,
 } from '../services/lessonSetService.js'
 
 export const lessonSetsRouter = express.Router()
@@ -97,7 +97,7 @@ lessonSetsRouter.delete(
   requireRoles(['ADMIN']),
   asyncHandler(async (req, res) => {
     const { id } = lessonSetParamsSchema.parse(req.params)
-    const cancelled = await deleteLessonSet(id)
+    const cancelled = await cancelLessonSet(id)
     res.status(200).json(cancelled)
   })
 )
