@@ -212,6 +212,30 @@ describe('listClasses', () => {
     )
   })
 
+  it('filters by explicit status when provided', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    await listClasses({ status: 'COMPLETED' })
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'COMPLETED' }),
+      })
+    )
+  })
+
+  it('uses explicit status over the ACTIVE default when both instructorId and status are provided', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    await listClasses({ instructorId: 'user_1', status: 'CANCELLED' })
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'CANCELLED' }),
+      })
+    )
+  })
+
   it('does not apply startsAt gte default when instructorId is provided', async () => {
     mockFindMany.mockResolvedValue([])
 

@@ -1,5 +1,6 @@
 import express from 'express'
 import { z } from 'zod'
+import { ClassStatus } from 'db'
 import { requireAuth } from '../middleware/requireAuth.js'
 import { requireRoles } from '../middleware/requireRoles.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
@@ -11,6 +12,7 @@ const listClassesQuerySchema = z
   .object({
     categoryId: z.string().min(1).optional(),
     instructorId: z.string().min(1).optional(),
+    status: z.nativeEnum(ClassStatus).optional(),
     from: z.coerce.date().optional(),
     to: z.coerce.date().optional(),
     page: z.coerce.number().int().min(1).optional(),
@@ -47,6 +49,7 @@ classesRouter.get(
     const result = await listClasses({
       categoryId: query.categoryId,
       instructorId: query.instructorId,
+      status: query.status,
       from: query.from,
       to: query.to,
       page: query.page,
