@@ -292,9 +292,9 @@ describe('cancelLessonSetRegistration', () => {
 
     it('cancels all ENROLLED registrations for the student', async () => {
       const registrations = [
-        { id: 'reg_1', classId: 'cls_1', membershipId: null, membership: null,
+        { id: 'reg_1', classId: 'cls_1', status: 'ENROLLED', membershipId: null, membership: null,
           class: { startsAt: session1StartsAt } },
-        { id: 'reg_2', classId: 'cls_2', membershipId: null, membership: null,
+        { id: 'reg_2', classId: 'cls_2', status: 'ENROLLED', membershipId: null, membership: null,
           class: { startsAt: session2StartsAt } },
       ]
       mockRegistrationFindMany.mockResolvedValue(registrations as never)
@@ -312,26 +312,24 @@ describe('cancelLessonSetRegistration', () => {
       })
     })
 
-    it('refunds a pack credit for each registration backed by a pack membership', async () => {
+    it('refunds pack credits for each registration backed by a pack membership', async () => {
       const packMembership = { id: 'mem_1', classesRemaining: 4, classesTotal: 5 }
       const registrations = [
-        { id: 'reg_1', classId: 'cls_1', membershipId: 'mem_1', membership: packMembership,
-          class: { startsAt: session1StartsAt } },
-        { id: 'reg_2', classId: 'cls_2', membershipId: 'mem_1', membership: packMembership,
-          class: { startsAt: session2StartsAt } },
+        { id: 'reg_1', classId: 'cls_1', status: 'ENROLLED', membershipId: 'mem_1',
+          membership: packMembership, class: { startsAt: session1StartsAt } },
+        { id: 'reg_2', classId: 'cls_2', status: 'ENROLLED', membershipId: 'mem_1',
+          membership: packMembership, class: { startsAt: session2StartsAt } },
       ]
       mockRegistrationFindMany.mockResolvedValue(registrations as never)
 
       await cancelLessonSetRegistration('ls_1', 'user_1')
 
-      expect(mockMembershipUpdate).toHaveBeenCalledTimes(2)
+      expect(mockMembershipUpdate).toHaveBeenCalledOnce()
+      expect(mockMembershipUpdate).toHaveBeenCalledWith({
+        where: { id: 'mem_1' },
+        data: { classesRemaining: { increment: 2 } },
+      })
       expect(mockMembershipTransactionCreate).toHaveBeenCalledTimes(2)
-      expect(mockMembershipUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 'mem_1' },
-          data: { classesRemaining: { increment: 1 } },
-        })
-      )
     })
 
     it('cancels WAITLISTED registrations for the student', async () => {
@@ -378,11 +376,50 @@ describe('cancelLessonSetRegistration', () => {
       expect(mockMembershipTransactionCreate).not.toHaveBeenCalled()
     })
 
+    it('issues a single membership increment for all sessions on the same membership', async () => {
+      const packMembership = { id: 'mem_1', classesRemaining: 4, classesTotal: 5 }
+      const registrations = [
+        { id: 'reg_1', classId: 'cls_1', status: 'ENROLLED', membershipId: 'mem_1',
+          membership: packMembership, class: { startsAt: session1StartsAt } },
+        { id: 'reg_2', classId: 'cls_2', status: 'ENROLLED', membershipId: 'mem_1',
+          membership: packMembership, class: { startsAt: session2StartsAt } },
+      ]
+      mockRegistrationFindMany.mockResolvedValue(registrations as never)
+
+      await cancelLessonSetRegistration('ls_1', 'user_1')
+
+      expect(mockMembershipUpdate).toHaveBeenCalledOnce()
+      expect(mockMembershipUpdate).toHaveBeenCalledWith({
+        where: { id: 'mem_1' },
+        data: { classesRemaining: { increment: 2 } },
+      })
+    })
+
+    it('computes balanceAfter as baseBalance + (index + 1) for each transaction', async () => {
+      const packMembership = { id: 'mem_1', classesRemaining: 4, classesTotal: 5 }
+      const registrations = [
+        { id: 'reg_1', classId: 'cls_1', status: 'ENROLLED', membershipId: 'mem_1',
+          membership: packMembership, class: { startsAt: session1StartsAt } },
+        { id: 'reg_2', classId: 'cls_2', status: 'ENROLLED', membershipId: 'mem_1',
+          membership: packMembership, class: { startsAt: session2StartsAt } },
+      ]
+      mockRegistrationFindMany.mockResolvedValue(registrations as never)
+
+      await cancelLessonSetRegistration('ls_1', 'user_1')
+
+      expect(mockMembershipTransactionCreate).toHaveBeenNthCalledWith(1,
+        expect.objectContaining({ data: expect.objectContaining({ balanceAfter: 5 }) })
+      )
+      expect(mockMembershipTransactionCreate).toHaveBeenNthCalledWith(2,
+        expect.objectContaining({ data: expect.objectContaining({ balanceAfter: 6 }) })
+      )
+    })
+
     it('does not write a refund for a time-based membership', async () => {
       const timeMembership = { id: 'mem_2', classesRemaining: null, classesTotal: null }
       const registrations = [
-        { id: 'reg_1', classId: 'cls_1', membershipId: 'mem_2', membership: timeMembership,
-          class: { startsAt: session1StartsAt } },
+        { id: 'reg_1', classId: 'cls_1', status: 'ENROLLED', membershipId: 'mem_2',
+          membership: timeMembership, class: { startsAt: session1StartsAt } },
       ]
       mockRegistrationFindMany.mockResolvedValue(registrations as never)
 

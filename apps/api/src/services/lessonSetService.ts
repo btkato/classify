@@ -256,30 +256,53 @@ export async function cancelLessonSetRegistration(
           },
           data: { waitlistPosition: { decrement: 1 } },
         })
-      } else if (
-        !hasStarted &&
-        registration.membershipId !== null &&
-        registration.membership !== null &&
-        registration.membership.classesRemaining !== null
-      ) {
-        await transaction.membership.update({
-          where: { id: registration.membershipId },
-          data: { classesRemaining: { increment: 1 } },
-        })
-        await transaction.membershipTransaction.create({
-          data: {
-            membershipId: registration.membershipId,
-            registrationId: registration.id,
-            delta: 1,
-            balanceAfter: registration.membership.classesRemaining + 1,
-          },
-        })
       }
 
       await transaction.registration.update({
         where: { id: registration.id },
         data: { status: 'CANCELLED', waitlistPosition: null },
       })
+    }
+
+    if (!hasStarted) {
+      type RefundGroup = { baseBalance: number; registrations: Array<{ id: string; membershipId: string }> }
+      const refundGroups = new Map<string, RefundGroup>()
+
+      for (const registration of registrationsToCancel) {
+        if (
+          registration.status === 'ENROLLED' &&
+          registration.membershipId !== null &&
+          registration.membership !== null &&
+          registration.membership.classesRemaining !== null
+        ) {
+          const group = refundGroups.get(registration.membershipId)
+          if (group) {
+            group.registrations.push(registration)
+          } else {
+            refundGroups.set(registration.membershipId, {
+              baseBalance: registration.membership.classesRemaining,
+              registrations: [registration],
+            })
+          }
+        }
+      }
+
+      for (const [membershipId, { baseBalance, registrations }] of refundGroups) {
+        await transaction.membership.update({
+          where: { id: membershipId },
+          data: { classesRemaining: { increment: registrations.length } },
+        })
+        for (const [index, registration] of registrations.entries()) {
+          await transaction.membershipTransaction.create({
+            data: {
+              membershipId,
+              registrationId: registration.id,
+              delta: 1,
+              balanceAfter: baseBalance + (index + 1),
+            },
+          })
+        }
+      }
     }
   })
 }
