@@ -8,3 +8,7 @@ export async function createCategory(name: string): Promise<ClassCategory> {
 export async function listCategories(): Promise<ClassCategory[]> {
   return prisma.classCategory.findMany({ orderBy: { name: 'asc' } })
 }
+
+export async function deleteCategory(id: string): Promise<ClassCategory> {
+  return prisma.classCategory.delete({ where: { id } })
+}

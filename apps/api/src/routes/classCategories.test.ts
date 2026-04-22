@@ -19,6 +19,7 @@ vi.mock('../lib/prisma.js', () => ({
 vi.mock('../services/classCategoryService.js', () => ({
   createCategory: vi.fn(),
   listCategories: vi.fn(),
+  deleteCategory: vi.fn(),
 }))
 
 import { app } from '../app.js'
@@ -117,6 +118,64 @@ describe('POST /class-categories', () => {
         .send({ name: 'Yoga' })
 
       expect(res.status).toBe(409)
+    })
+  })
+})
+
+describe('DELETE /class-categories/:id', () => {
+  describe('authentication and authorisation', () => {
+    it('returns 401 when not authenticated', async () => {
+      mockGetAuth.mockReturnValue({ userId: null } as never)
+
+      const res = await request(app).delete('/class-categories/cat_1')
+
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 403 when authenticated as STUDENT', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'STUDENT' }] as never)
+
+      const res = await request(app).delete('/class-categories/cat_1')
+
+      expect(res.status).toBe(403)
+    })
+
+    it('returns 403 when authenticated as INSTRUCTOR', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'INSTRUCTOR' }] as never)
+
+      const res = await request(app).delete('/class-categories/cat_1')
+
+      expect(res.status).toBe(403)
+    })
+  })
+
+  describe('success', () => {
+    it('returns 200 with the deleted category when admin', async () => {
+      const category = { id: 'cat_1', name: 'Yoga', createdAt: new Date() }
+      const mockDeleteCategory = vi.mocked(classCategoryService.deleteCategory)
+      mockDeleteCategory.mockResolvedValue(category as never)
+
+      const res = await request(app).delete('/class-categories/cat_1')
+
+      expect(res.status).toBe(200)
+      expect(mockDeleteCategory).toHaveBeenCalledWith('cat_1')
+      expect(res.body).toMatchObject({ id: 'cat_1', name: 'Yoga' })
+    })
+  })
+
+  describe('error handling', () => {
+    it('returns 404 when the category does not exist', async () => {
+      const mockDeleteCategory = vi.mocked(classCategoryService.deleteCategory)
+      mockDeleteCategory.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Record not found', {
+          code: 'P2025',
+          clientVersion: '7.7.0',
+        })
+      )
+
+      const res = await request(app).delete('/class-categories/cat_1')
+
+      expect(res.status).toBe(404)
     })
   })
 })
