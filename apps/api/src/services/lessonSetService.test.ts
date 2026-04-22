@@ -477,6 +477,24 @@ describe('enrollInLessonSet', () => {
     await expect(enrollInLessonSet('ls_1', 'user_1')).rejects.toThrow(ValidationError)
   })
 
+  it('throws ValidationError when the lesson set is not ACTIVE', async () => {
+    mockLessonSetFindUnique.mockResolvedValue({
+      ...fullSetWithSessions,
+      status: 'CANCELLED',
+    } as never)
+
+    await expect(enrollInLessonSet('ls_1', 'user_1')).rejects.toThrow(ValidationError)
+  })
+
+  it('throws ValidationError when the lesson set has no active sessions', async () => {
+    mockLessonSetFindUnique.mockResolvedValue({
+      ...fullSetWithSessions,
+      classes: [],
+    } as never)
+
+    await expect(enrollInLessonSet('ls_1', 'user_1')).rejects.toThrow(ValidationError)
+  })
+
   it('throws ValidationError when the lesson set has already started', async () => {
     const startedSessions = [
       { ...sessions[0], startsAt: new Date(Date.now() - msPerDay) },

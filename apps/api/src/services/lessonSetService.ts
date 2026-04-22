@@ -136,6 +136,14 @@ export async function enrollInLessonSet(
     throw new ValidationError('This lesson set does not support full-set enrollment. Enroll per session instead.')
   }
 
+  if (lessonSet.status !== 'ACTIVE') {
+    throw new ValidationError('This lesson set is not available for enrollment.')
+  }
+
+  if (lessonSet.classes.length === 0) {
+    throw new ValidationError('This lesson set has no active sessions available for enrollment.')
+  }
+
   const now = new Date()
   const firstSession = lessonSet.classes.at(0)
   if (firstSession !== undefined && firstSession.startsAt <= now) {
