@@ -208,6 +208,7 @@ model Class {
   registrations Registration[]
   announcements Announcement[]
 
+  @@unique([lessonSetId, sessionNumber])
   @@index([instructorId])
   @@index([status])
   @@index([status, startsAt])
