@@ -35,6 +35,26 @@ beforeEach(() => {
   mockGetAuth.mockReturnValue({ userId: 'user_123' } as never)
 })
 
+describe('GET /users/me', () => {
+  it('returns 200 with the authenticated user', async () => {
+    mockGetUserById.mockResolvedValue(mockUser as never)
+
+    const res = await request(app).get('/users/me')
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual(mockUser)
+    expect(mockGetUserById).toHaveBeenCalledWith('user_123')
+  })
+
+  it('returns 401 when not authenticated', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+
+    const res = await request(app).get('/users/me')
+
+    expect(res.status).toBe(401)
+  })
+})
+
 describe('GET /users/:id', () => {
   it('returns 200 with user data when authenticated', async () => {
     mockGetUserById.mockResolvedValue(mockUser as never)
