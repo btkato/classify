@@ -188,27 +188,33 @@ describe('POST /classes', () => {
 })
 
 describe('GET /classes', () => {
-  it('returns 200 with an array of classes', async () => {
-    mockListClasses.mockResolvedValue([createdClass] as never)
+  const pageResult = { data: [createdClass], total: 1, page: 1, totalPages: 1 }
+  const emptyPageResult = { data: [], total: 0, page: 1, totalPages: 0 }
+
+  it('returns 200 with a paginated result', async () => {
+    mockListClasses.mockResolvedValue(pageResult as never)
 
     const res = await request(app).get('/classes')
 
     expect(res.status).toBe(200)
-    expect(res.body).toHaveLength(1)
-    expect(res.body[0]).toMatchObject({ id: 'class_1', title: 'Morning Yoga' })
+    expect(res.body.data).toHaveLength(1)
+    expect(res.body.data[0]).toMatchObject({ id: 'class_1', title: 'Morning Yoga' })
+    expect(res.body.total).toBe(1)
+    expect(res.body.page).toBe(1)
+    expect(res.body.totalPages).toBe(1)
   })
 
-  it('returns 200 with an empty array when no classes exist', async () => {
-    mockListClasses.mockResolvedValue([])
+  it('returns 200 with empty data when no classes exist', async () => {
+    mockListClasses.mockResolvedValue(emptyPageResult as never)
 
     const res = await request(app).get('/classes')
 
     expect(res.status).toBe(200)
-    expect(res.body).toEqual([])
+    expect(res.body.data).toEqual([])
   })
 
   it('passes categoryId query param to the service', async () => {
-    mockListClasses.mockResolvedValue([])
+    mockListClasses.mockResolvedValue(emptyPageResult as never)
 
     await request(app).get('/classes?categoryId=cat_1')
 
@@ -217,24 +223,41 @@ describe('GET /classes', () => {
     )
   })
 
+  it('passes instructorId query param to the service', async () => {
+    mockListClasses.mockResolvedValue(emptyPageResult as never)
+
+    await request(app).get('/classes?instructorId=user_1')
+
+    expect(mockListClasses).toHaveBeenCalledWith(
+      expect.objectContaining({ instructorId: 'user_1' })
+    )
+  })
+
+  it('passes page and pageSize query params to the service', async () => {
+    mockListClasses.mockResolvedValue(emptyPageResult as never)
+
+    await request(app).get('/classes?page=2&pageSize=5')
+
+    expect(mockListClasses).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 2, pageSize: 5 })
+    )
+  })
+
   it('passes from and to query params as dates to the service', async () => {
-    mockListClasses.mockResolvedValue([])
+    mockListClasses.mockResolvedValue(emptyPageResult as never)
     const from = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
     const to = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString()
 
     await request(app).get(`/classes?from=${from}&to=${to}`)
 
     expect(mockListClasses).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: new Date(from),
-        to: new Date(to),
-      })
+      expect.objectContaining({ from: new Date(from), to: new Date(to) })
     )
   })
 
   it('does not require authentication', async () => {
     mockGetAuth.mockReturnValue({ userId: null } as never)
-    mockListClasses.mockResolvedValue([])
+    mockListClasses.mockResolvedValue(emptyPageResult as never)
 
     const res = await request(app).get('/classes')
 

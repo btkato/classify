@@ -36,9 +36,15 @@ function ClassCard({ cls }: { cls: Class }) {
 
 export default function ClassListPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined)
+  const [page, setPage] = useState(1)
 
   const { data: categories } = useClassCategories()
-  const { data: classes, isLoading } = useClasses(selectedCategoryId)
+  const { data: classPage, isLoading } = useClasses(selectedCategoryId, page)
+
+  function handleCategoryChange(categoryId: string | undefined) {
+    setSelectedCategoryId(categoryId)
+    setPage(1)
+  }
 
   if (isLoading) {
     return (
@@ -57,7 +63,7 @@ export default function ClassListPage() {
           variant={selectedCategoryId === undefined ? 'default' : 'secondary'}
           size="sm"
           className="rounded-full"
-          onClick={() => setSelectedCategoryId(undefined)}
+          onClick={() => handleCategoryChange(undefined)}
         >
           All
         </Button>
@@ -67,7 +73,7 @@ export default function ClassListPage() {
             variant={selectedCategoryId === cat.id ? 'default' : 'secondary'}
             size="sm"
             className="rounded-full"
-            onClick={() => setSelectedCategoryId(cat.id)}
+            onClick={() => handleCategoryChange(cat.id)}
           >
             {cat.name}
           </Button>
@@ -75,10 +81,36 @@ export default function ClassListPage() {
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {classes?.map((cls) => (
+        {classPage?.data.map((cls) => (
           <ClassCard key={cls.id} cls={cls} />
         ))}
       </div>
+
+      {classPage && classPage.totalPages > 1 && (
+        <div className="mt-8 flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Page {classPage.page} of {classPage.totalPages}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === classPage.totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

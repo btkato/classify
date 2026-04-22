@@ -10,8 +10,11 @@ export const classesRouter = express.Router()
 const listClassesQuerySchema = z
   .object({
     categoryId: z.string().min(1).optional(),
+    instructorId: z.string().min(1).optional(),
     from: z.coerce.date().optional(),
     to: z.coerce.date().optional(),
+    page: z.coerce.number().int().min(1).optional(),
+    pageSize: z.coerce.number().int().min(1).optional(),
   })
   .refine((query) => !query.from || !query.to || query.from <= query.to, {
     path: ['to'],
@@ -41,12 +44,15 @@ classesRouter.get(
   '/',
   asyncHandler(async (req, res) => {
     const query = listClassesQuerySchema.parse(req.query)
-    const classes = await listClasses({
+    const result = await listClasses({
       categoryId: query.categoryId,
+      instructorId: query.instructorId,
       from: query.from,
       to: query.to,
+      page: query.page,
+      pageSize: query.pageSize,
     })
-    res.status(200).json(classes)
+    res.status(200).json(result)
   })
 )
 

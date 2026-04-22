@@ -17,8 +17,18 @@ type RegistrationWithUser = Prisma.RegistrationGetPayload<{
 
 interface ListClassesInput {
   categoryId?: string
+  instructorId?: string
   from?: Date
   to?: Date
+  page?: number
+  pageSize?: number
+}
+
+export interface ClassPage {
+  data: Class[]
+  total: number
+  page: number
+  totalPages: number
 }
 
 interface CreateClassInput {
@@ -34,18 +44,27 @@ interface CreateClassInput {
   sessionNumber?: number
 }
 
-export async function listClasses(input: ListClassesInput): Promise<Class[]> {
-  return prisma.class.findMany({
-    where: {
-      status: 'ACTIVE',
-      categoryId: input.categoryId,
-      startsAt: {
-        gte: input.from ?? new Date(),
-        lte: input.to,
-      },
+export async function listClasses(input: ListClassesInput): Promise<ClassPage> {
+  const page = input.page ?? 1
+  const pageSize = input.pageSize ?? 10
+  const skip = (page - 1) * pageSize
+
+  const where = {
+    categoryId: input.categoryId,
+    instructorId: input.instructorId,
+    ...(input.instructorId ? {} : { status: 'ACTIVE' as const }),
+    startsAt: {
+      gte: input.instructorId ? input.from : (input.from ?? new Date()),
+      lte: input.to,
     },
-    orderBy: { startsAt: 'asc' },
-  })
+  }
+
+  const [data, total] = await Promise.all([
+    prisma.class.findMany({ where, orderBy: { startsAt: 'asc' }, skip, take: pageSize }),
+    prisma.class.count({ where }),
+  ])
+
+  return { data, total, page, totalPages: Math.ceil(total / pageSize) }
 }
 
 export type ClassWithEnrolledCount = Class & { enrolledCount: number }

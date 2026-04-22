@@ -46,6 +46,10 @@ const mockClasses = [
   },
 ]
 
+function mockClassPage(classes: typeof mockClasses) {
+  return { data: classes, total: classes.length, page: 1, totalPages: 1 }
+}
+
 function renderPage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -74,7 +78,7 @@ describe('ClassListPage', () => {
   it('renders category filter buttons once categories load', async () => {
     mockApiFetch
       .mockResolvedValueOnce(mockCategories)
-      .mockResolvedValueOnce(mockClasses)
+      .mockResolvedValueOnce(mockClassPage(mockClasses))
 
     renderPage()
 
@@ -88,7 +92,7 @@ describe('ClassListPage', () => {
   it('renders class cards once classes load', async () => {
     mockApiFetch
       .mockResolvedValueOnce(mockCategories)
-      .mockResolvedValueOnce(mockClasses)
+      .mockResolvedValueOnce(mockClassPage(mockClasses))
 
     renderPage()
 
@@ -101,8 +105,8 @@ describe('ClassListPage', () => {
   it('calls the API with categoryId when a category filter is clicked', async () => {
     mockApiFetch
       .mockResolvedValueOnce(mockCategories)
-      .mockResolvedValueOnce(mockClasses)
-      .mockResolvedValueOnce([mockClasses[0]])
+      .mockResolvedValueOnce(mockClassPage(mockClasses))
+      .mockResolvedValueOnce(mockClassPage([mockClasses[0]!]))
 
     renderPage()
 
@@ -119,12 +123,11 @@ describe('ClassListPage', () => {
     })
   })
 
-  it('clears the category filter when All is clicked', async () => {
+  it('shows all classes when All is clicked after a category filter', async () => {
     mockApiFetch
       .mockResolvedValueOnce(mockCategories)
-      .mockResolvedValueOnce(mockClasses)
-      .mockResolvedValueOnce([mockClasses[0]])
-      .mockResolvedValueOnce(mockClasses)
+      .mockResolvedValueOnce(mockClassPage(mockClasses))
+      .mockResolvedValueOnce(mockClassPage([mockClasses[0]!]))
 
     renderPage()
 
@@ -136,8 +139,8 @@ describe('ClassListPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'All' }))
 
     await waitFor(() => {
-      const lastCall = mockApiFetch.mock.calls.at(-1)
-      expect(lastCall?.[0]).not.toContain('categoryId')
+      expect(screen.getByText('Morning Yoga')).toBeInTheDocument()
+      expect(screen.getByText('Core Pilates')).toBeInTheDocument()
     })
   })
 })
