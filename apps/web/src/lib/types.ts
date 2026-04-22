@@ -38,6 +38,14 @@ export interface MembershipHistoryPage {
   totalPages: number
 }
 
+export interface CurrentUser {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  roles: { role: string }[]
+}
+
 export interface ClassCategory {
   id: string
   name: string
