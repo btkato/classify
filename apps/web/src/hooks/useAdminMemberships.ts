@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@clerk/clerk-react'
 import { apiFetch } from '../lib/api'
-import type { MembershipPage } from '../lib/types'
+import type { AdminMembershipPage } from '../lib/types'
 
 interface UseAdminMembershipsParams {
   page?: number
@@ -22,7 +22,7 @@ export function useAdminMemberships(params: UseAdminMembershipsParams = {}) {
     queryKey: ['admin-memberships', { page, pageSize, status }],
     queryFn: async () => {
       const token = await getToken()
-      return apiFetch<MembershipPage>(`/admin/memberships?${queryParams.toString()}`, token ?? undefined)
+      return apiFetch<AdminMembershipPage>(`/admin/memberships?${queryParams.toString()}`, token ?? undefined)
     },
     staleTime: 1000 * 60,
   })

@@ -203,8 +203,12 @@ interface ListAllMembershipsInput {
   status?: MembershipStatus
 }
 
+type MembershipWithUser = Prisma.MembershipGetPayload<{
+  include: { user: { select: { email: true; firstName: true; lastName: true } } }
+}>
+
 export interface MembershipPage {
-  data: Membership[]
+  data: MembershipWithUser[]
   total: number
   page: number
   totalPages: number
@@ -217,6 +221,7 @@ export async function listAllMemberships(input: ListAllMembershipsInput): Promis
   const [data, total] = await Promise.all([
     prisma.membership.findMany({
       where,
+      include: { user: { select: { email: true, firstName: true, lastName: true } } },
       orderBy: { createdAt: 'desc' },
       skip,
       take: input.pageSize,
