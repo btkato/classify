@@ -21,6 +21,7 @@ export interface RegistrationWithClass {
 
 export interface Membership {
   id: string
+  userId: string
   type: string
   status: string
   expiresAt: string | null
@@ -29,6 +30,30 @@ export interface Membership {
   priority: number
   createdAt: string
   updatedAt: string
+}
+
+export interface MembershipPage {
+  data: Membership[]
+  total: number
+  page: number
+  totalPages: number
+}
+
+export interface AdminUser {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  phone: string | null
+  createdAt: string
+  roles: { role: string }[]
+}
+
+export interface UserPage {
+  data: AdminUser[]
+  total: number
+  page: number
+  totalPages: number
 }
 
 export interface MembershipHistoryPage {

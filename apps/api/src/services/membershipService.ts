@@ -200,6 +200,7 @@ export async function cancelMembership(id: string, userId: string): Promise<Memb
 interface ListAllMembershipsInput {
   page: number
   pageSize: number
+  status?: MembershipStatus
 }
 
 export interface MembershipPage {
@@ -211,14 +212,16 @@ export interface MembershipPage {
 
 export async function listAllMemberships(input: ListAllMembershipsInput): Promise<MembershipPage> {
   const skip = (input.page - 1) * input.pageSize
+  const where = input.status ? { status: input.status } : {}
 
   const [data, total] = await Promise.all([
     prisma.membership.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       skip,
       take: input.pageSize,
     }),
-    prisma.membership.count(),
+    prisma.membership.count({ where }),
   ])
 
   return { data, total, page: input.page, totalPages: Math.ceil(total / input.pageSize) }
