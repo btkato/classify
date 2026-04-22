@@ -163,16 +163,18 @@ export async function enrollInLessonSet(
       )
     }
 
-    let allHaveSpace = true
-    for (const session of lessonSet.classes) {
-      const enrolledCount = await transaction.registration.count({
-        where: { classId: session.id, status: 'ENROLLED' },
-      })
-      if (enrolledCount >= session.capacity) {
-        allHaveSpace = false
-        break
-      }
-    }
+    const sessionIds = lessonSet.classes.map((session) => session.id)
+    const enrolledCounts = await transaction.registration.groupBy({
+      by: ['classId'],
+      where: { classId: { in: sessionIds }, status: 'ENROLLED' },
+      _count: { _all: true },
+    })
+    const enrolledCountByClassId = new Map(
+      enrolledCounts.map((row) => [row.classId, row._count._all])
+    )
+    const allHaveSpace = lessonSet.classes.every(
+      (session) => (enrolledCountByClassId.get(session.id) ?? 0) < session.capacity
+    )
 
     const createdRegistrations: Registration[] = []
 
