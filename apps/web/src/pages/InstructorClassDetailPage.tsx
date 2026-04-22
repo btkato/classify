@@ -4,6 +4,10 @@ import { useClass } from '../hooks/useClass'
 import { useUpdateClass } from '../hooks/useUpdateClass'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { Skeleton } from '../components/ui/skeleton'
+import { Textarea } from '../components/ui/textarea'
 
 export default function InstructorClassDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -22,8 +26,13 @@ export default function InstructorClassDetailPage() {
 
   if (isLoading) {
     return (
-      <main className="container mx-auto px-4 py-8">
-        <p>Loading...</p>
+      <main className="container mx-auto px-4 py-8 max-w-2xl" data-testid="loading-skeleton">
+        <Skeleton className="h-4 w-32" />
+        <div className="mt-6 space-y-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-4 w-40" />
+        </div>
       </main>
     )
   }
@@ -85,30 +94,24 @@ export default function InstructorClassDetailPage() {
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="description" className="text-sm font-medium">
-              Description
-            </label>
-            <textarea
+            <Label htmlFor="description">Description</Label>
+            <Textarea
               id="description"
               rows={4}
               placeholder="Add a description..."
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-foreground/40 bg-background"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="location" className="text-sm font-medium">
-              Location
-            </label>
-            <input
+            <Label htmlFor="location">Location</Label>
+            <Input
               id="location"
               type="text"
               placeholder="Add a location..."
               value={location}
               onChange={(event) => setLocation(event.target.value)}
-              className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-foreground/40 bg-background"
             />
           </div>
 

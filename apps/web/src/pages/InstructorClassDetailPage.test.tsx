@@ -61,7 +61,7 @@ describe('InstructorClassDetailPage', () => {
   it('shows a loading state while data is fetching', () => {
     mockApiFetch.mockReturnValue(new Promise(() => {}))
     renderPage()
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument()
   })
 
   it('renders class info once loaded', async () => {
