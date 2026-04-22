@@ -39,6 +39,17 @@ export interface MembershipPage {
   totalPages: number
 }
 
+export interface AdminMembership extends Membership {
+  user: { email: string; firstName: string; lastName: string }
+}
+
+export interface AdminMembershipPage {
+  data: AdminMembership[]
+  total: number
+  page: number
+  totalPages: number
+}
+
 export interface AdminUser {
   id: string
   email: string

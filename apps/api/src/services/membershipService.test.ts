@@ -724,8 +724,8 @@ describe('listMembershipHistory', () => {
 
 describe('listAllMemberships', () => {
   const memberships = [
-    { id: 'mem_1', userId: 'user_1', type: 'MONTHLY', status: 'ACTIVE' },
-    { id: 'mem_2', userId: 'user_2', type: 'DROP_IN', status: 'EXPIRED' },
+    { id: 'mem_1', userId: 'user_1', type: 'MONTHLY', status: 'ACTIVE', user: { email: 'a@example.com', firstName: 'Alice', lastName: 'Smith' } },
+    { id: 'mem_2', userId: 'user_2', type: 'DROP_IN', status: 'EXPIRED', user: { email: 'b@example.com', firstName: 'Bob', lastName: 'Jones' } },
   ]
 
   beforeEach(() => {
@@ -738,7 +738,12 @@ describe('listAllMemberships', () => {
 
     expect(result).toEqual({ data: memberships, total: 2, page: 1, totalPages: 1 })
     expect(mockFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: 0, take: 20, orderBy: { createdAt: 'desc' } })
+      expect.objectContaining({
+        skip: 0,
+        take: 20,
+        orderBy: { createdAt: 'desc' },
+        include: { user: { select: { email: true, firstName: true, lastName: true } } },
+      })
     )
   })
 
