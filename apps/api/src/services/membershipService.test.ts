@@ -4,6 +4,7 @@ import {
   createMembership,
   listMemberships,
   listMembershipHistory,
+  listAllMemberships,
   getMembership,
   getValidMembership,
   updateMembership,
@@ -718,5 +719,40 @@ describe('listMembershipHistory', () => {
     const result = await listMembershipHistory('user_1', 1, 5)
 
     expect(result).toEqual({ data: [], total: 0, page: 1, totalPages: 0 })
+  })
+})
+
+describe('listAllMemberships', () => {
+  const memberships = [
+    { id: 'mem_1', userId: 'user_1', type: 'MONTHLY', status: 'ACTIVE' },
+    { id: 'mem_2', userId: 'user_2', type: 'DROP_IN', status: 'EXPIRED' },
+  ]
+
+  beforeEach(() => {
+    mockFindMany.mockResolvedValue(memberships as never)
+    mockCount.mockResolvedValue(2 as never)
+  })
+
+  it('returns paginated memberships across all users', async () => {
+    const result = await listAllMemberships({ page: 1, pageSize: 20 })
+
+    expect(result).toEqual({ data: memberships, total: 2, page: 1, totalPages: 1 })
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, take: 20, orderBy: { createdAt: 'desc' } })
+    )
+  })
+
+  it('applies skip correctly for page 2', async () => {
+    await listAllMemberships({ page: 2, pageSize: 20 })
+
+    expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 20, take: 20 }))
+  })
+
+  it('does not filter by userId', async () => {
+    await listAllMemberships({ page: 1, pageSize: 20 })
+
+    expect(mockFindMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ userId: expect.anything() }) })
+    )
   })
 })
