@@ -110,7 +110,7 @@ describe('POST /lesson-sets', () => {
     expect(response.body).toMatchObject({ id: 'ls_1', title: 'Morning Yoga Series' })
   })
 
-  it('calls createLessonSet with the authenticated userId as instructorId', async () => {
+  it('calls createLessonSet with the authenticated userId as instructorId when none provided', async () => {
     mockCreateLessonSet.mockResolvedValue(lessonSetRecord as never)
 
     await request(app)
@@ -120,6 +120,18 @@ describe('POST /lesson-sets', () => {
 
     expect(mockCreateLessonSet).toHaveBeenCalledWith(
       expect.objectContaining({ instructorId: 'user_1' })
+    )
+  })
+
+  it('uses instructorId from body when provided', async () => {
+    mockCreateLessonSet.mockResolvedValue(lessonSetRecord as never)
+
+    await request(app)
+      .post('/lesson-sets')
+      .send({ ...validBody, instructorId: 'instructor_99' })
+
+    expect(mockCreateLessonSet).toHaveBeenCalledWith(
+      expect.objectContaining({ instructorId: 'instructor_99' })
     )
   })
 })

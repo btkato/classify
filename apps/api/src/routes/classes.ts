@@ -33,6 +33,7 @@ const updateClassBodySchema = z.object({
 })
 
 const createClassBodySchema = z.object({
+  instructorId: z.string().min(1).optional(),
   categoryId: z.string().min(1),
   title: z.string().min(1),
   description: z.string().min(1).optional(),
@@ -135,7 +136,7 @@ classesRouter.post(
     }
 
     const newClass = await createClass({
-      instructorId: userId,
+      instructorId: body.instructorId ?? userId,
       categoryId: body.categoryId,
       title: body.title,
       description: body.description,
