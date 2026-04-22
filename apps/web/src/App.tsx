@@ -3,12 +3,17 @@ import { SignIn, SignUp } from '@clerk/clerk-react'
 import { z } from 'zod'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import RoleProtectedRoute from './components/RoleProtectedRoute'
 import ClassListPage from './pages/ClassListPage'
 import ClassDetailPage from './pages/ClassDetailPage'
 import StudentDashboard from './pages/StudentDashboard'
 import MyRegistrationsPage from './pages/MyRegistrationsPage'
 import MembershipsPage from './pages/MembershipsPage'
 import MembershipPurchasePage from './pages/MembershipPurchasePage'
+import InstructorDashboard from './pages/InstructorDashboard'
+import InstructorClassListPage from './pages/InstructorClassListPage'
+import InstructorClassDetailPage from './pages/InstructorClassDetailPage'
+import InstructorRosterPage from './pages/InstructorRosterPage'
 
 const locationStateSchema = z.object({ from: z.object({ pathname: z.string() }) }).nullable()
 
@@ -58,6 +63,47 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MembershipPurchasePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/instructor"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="INSTRUCTOR">
+                <InstructorDashboard />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/instructor/classes"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="INSTRUCTOR">
+                <InstructorClassListPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/instructor/classes/:id"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="INSTRUCTOR">
+                <InstructorClassDetailPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/instructor/classes/:id/roster"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="INSTRUCTOR">
+                <InstructorRosterPage />
+              </RoleProtectedRoute>
             </ProtectedRoute>
           }
         />

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth, useUser, useClerk } from '@clerk/clerk-react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useCurrentUser } from '../hooks/useCurrentUser'
 import { Button } from '@/components/ui/button'
 
 export default function Navbar() {
@@ -8,6 +9,9 @@ export default function Navbar() {
   const { user } = useUser()
   const { signOut } = useClerk()
   const queryClient = useQueryClient()
+  const { data: currentUser } = useCurrentUser()
+
+  const isInstructor = currentUser?.roles.some((r) => r.role === 'INSTRUCTOR') ?? false
 
   function handleSignOut() {
     queryClient.removeQueries({ queryKey: ['current-user'] })
@@ -49,6 +53,14 @@ export default function Navbar() {
               >
                 Memberships
               </Link>
+              {isInstructor && (
+                <Link
+                  to="/instructor"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Instructor
+                </Link>
+              )}
               <span className="text-sm font-medium">
                 {user?.firstName ?? user?.emailAddresses[0]?.emailAddress}
               </span>
