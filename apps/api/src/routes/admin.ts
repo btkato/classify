@@ -5,7 +5,7 @@ import { requireAuth } from '../middleware/requireAuth.js'
 import { requireRoles } from '../middleware/requireRoles.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import { grantRole, revokeRole } from '../services/roleService.js'
-import { updateMembership } from '../services/membershipService.js'
+import { updateMembership, listAllMemberships } from '../services/membershipService.js'
 import { listUsers } from '../services/userService.js'
 
 export const adminRouter = express.Router()
@@ -35,6 +35,22 @@ const updateRoleBodySchema = z.object({
   role: z.nativeEnum(Role),
   action: z.enum(['grant', 'revoke']),
 })
+
+const listMembershipsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).default(20),
+})
+
+adminRouter.get(
+  '/memberships',
+  requireAuth,
+  requireRoles(['ADMIN']),
+  asyncHandler(async (req, res) => {
+    const query = listMembershipsQuerySchema.parse(req.query)
+    const result = await listAllMemberships(query)
+    res.status(200).json(result)
+  })
+)
 
 const updateMembershipParamsSchema = z.object({
   id: z.string().min(1),

@@ -197,6 +197,33 @@ export async function cancelMembership(id: string, userId: string): Promise<Memb
   })
 }
 
+interface ListAllMembershipsInput {
+  page: number
+  pageSize: number
+}
+
+export interface MembershipPage {
+  data: Membership[]
+  total: number
+  page: number
+  totalPages: number
+}
+
+export async function listAllMemberships(input: ListAllMembershipsInput): Promise<MembershipPage> {
+  const skip = (input.page - 1) * input.pageSize
+
+  const [data, total] = await Promise.all([
+    prisma.membership.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: input.pageSize,
+    }),
+    prisma.membership.count(),
+  ])
+
+  return { data, total, page: input.page, totalPages: Math.ceil(total / input.pageSize) }
+}
+
 export async function getValidMembership(
   userId: string,
   db: PrismaOrTransaction = prisma

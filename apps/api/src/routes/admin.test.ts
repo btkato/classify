@@ -22,6 +22,7 @@ vi.mock('../services/roleService.js', () => ({
 
 vi.mock('../services/membershipService.js', () => ({
   updateMembership: vi.fn(),
+  listAllMemberships: vi.fn(),
 }))
 
 vi.mock('../services/userService.js', () => ({
@@ -40,6 +41,7 @@ const mockFindMany = vi.mocked(prisma.userRole.findMany)
 const mockGrantRole = vi.mocked(roleService.grantRole)
 const mockRevokeRole = vi.mocked(roleService.revokeRole)
 const mockUpdateMembership = vi.mocked(membershipService.updateMembership)
+const mockListAllMemberships = vi.mocked(membershipService.listAllMemberships)
 const mockListUsers = vi.mocked(userService.listUsers)
 
 beforeEach(() => {
@@ -292,6 +294,55 @@ describe('GET /admin/users', () => {
 
       expect(mockListUsers).toHaveBeenCalledWith(
         expect.objectContaining({ search: 'jane' })
+      )
+    })
+  })
+})
+
+describe('GET /admin/memberships', () => {
+  const membershipPage = {
+    data: [{ id: 'mem_1', userId: 'user_1', type: 'MONTHLY', status: 'ACTIVE' }],
+    total: 1,
+    page: 1,
+    totalPages: 1,
+  }
+
+  beforeEach(() => {
+    mockListAllMemberships.mockResolvedValue(membershipPage as never)
+  })
+
+  describe('authentication and authorisation', () => {
+    it('returns 401 when not authenticated', async () => {
+      mockGetAuth.mockReturnValue({ userId: null } as never)
+
+      const res = await request(app).get('/admin/memberships')
+
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 403 when authenticated as STUDENT', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'STUDENT' }] as never)
+
+      const res = await request(app).get('/admin/memberships')
+
+      expect(res.status).toBe(403)
+    })
+  })
+
+  describe('success', () => {
+    it('returns 200 with paginated membership list', async () => {
+      const res = await request(app).get('/admin/memberships')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ total: 1, page: 1, totalPages: 1 })
+      expect(res.body.data).toHaveLength(1)
+    })
+
+    it('passes page and pageSize query params to listAllMemberships', async () => {
+      await request(app).get('/admin/memberships?page=3&pageSize=10')
+
+      expect(mockListAllMemberships).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 3, pageSize: 10 })
       )
     })
   })
