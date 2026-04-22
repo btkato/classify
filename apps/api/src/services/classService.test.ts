@@ -10,6 +10,7 @@ vi.mock('../lib/prisma.js', () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
+      count: vi.fn(),
     },
   },
 }))
@@ -18,6 +19,7 @@ const mockCreate = vi.mocked(prisma.class.create)
 const mockFindMany = vi.mocked(prisma.class.findMany)
 const mockFindUnique = vi.mocked(prisma.class.findUnique)
 const mockUpdate = vi.mocked(prisma.class.update)
+const mockCount = vi.mocked(prisma.class.count)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -91,6 +93,10 @@ describe('createClass', () => {
 })
 
 describe('listClasses', () => {
+  beforeEach(() => {
+    mockCount.mockResolvedValue(0)
+  })
+
   it('queries ACTIVE classes with startsAt >= now when no filters provided', async () => {
     mockFindMany.mockResolvedValue([])
 
@@ -114,15 +120,13 @@ describe('listClasses', () => {
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          categoryId: 'cat_1',
-        }),
+        where: expect.objectContaining({ categoryId: 'cat_1' }),
       })
     )
   })
 
   it('includes startsAt lte in the where clause when to is provided', async () => {
-    const toDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) // 7 days from now
+    const toDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7)
     mockFindMany.mockResolvedValue([])
 
     await listClasses({ to: toDate })
@@ -137,7 +141,7 @@ describe('listClasses', () => {
   })
 
   it('uses provided from date instead of now when from is provided', async () => {
-    const fromDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 2) // 2 days from now
+    const fromDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 2)
     mockFindMany.mockResolvedValue([])
 
     await listClasses({ from: fromDate })
@@ -151,16 +155,75 @@ describe('listClasses', () => {
     )
   })
 
-  it('returns the results from prisma', async () => {
+  it('returns a paginated result with data, total, page, and totalPages', async () => {
     const classes = [
       { id: 'class_1', title: 'Morning Yoga', startsAt: futureDate },
       { id: 'class_2', title: 'Evening Pilates', startsAt: futureDate },
     ]
     mockFindMany.mockResolvedValue(classes as never)
+    mockCount.mockResolvedValue(2)
 
     const result = await listClasses({})
 
-    expect(result).toEqual(classes)
+    expect(result).toEqual({ data: classes, total: 2, page: 1, totalPages: 1 })
+  })
+
+  it('defaults to page 1 and pageSize 10', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    await listClasses({})
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, take: 10 })
+    )
+  })
+
+  it('skips the correct number of records for page 2', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    await listClasses({ page: 2, pageSize: 10 })
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 10, take: 10 })
+    )
+  })
+
+  it('filters by instructorId when provided', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    await listClasses({ instructorId: 'user_1' })
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ instructorId: 'user_1' }),
+      })
+    )
+  })
+
+  it('does not filter by status ACTIVE when instructorId is provided', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    await listClasses({ instructorId: 'user_1' })
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.not.objectContaining({ status: 'ACTIVE' }),
+      })
+    )
+  })
+
+  it('does not apply startsAt gte default when instructorId is provided', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    await listClasses({ instructorId: 'user_1' })
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          startsAt: expect.objectContaining({ gte: undefined }),
+        }),
+      })
+    )
   })
 })
 

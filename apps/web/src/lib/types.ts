@@ -46,6 +46,13 @@ export interface CurrentUser {
   roles: { role: string }[]
 }
 
+export interface ClassPage {
+  data: Class[]
+  total: number
+  page: number
+  totalPages: number
+}
+
 export interface ClassCategory {
   id: string
   name: string
