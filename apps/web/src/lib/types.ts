@@ -108,3 +108,20 @@ export interface Class {
   status: string
   classNumber: number
 }
+
+export interface LessonSet {
+  id: string
+  title: string
+  description: string | null
+  enrollmentType: string
+  totalSessions: number
+  instructorId: string
+  categoryId: string
+  status: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface LessonSetWithClasses extends LessonSet {
+  classes: Class[]
+}
