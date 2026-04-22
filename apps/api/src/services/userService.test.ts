@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { getUserById, updateProfile, adminUpdateUser } from './userService.js'
+import { getUserById, updateProfile, adminUpdateUser, listUsers } from './userService.js'
 import { NotFoundError } from '../lib/errors.js'
 
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
     user: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
       update: vi.fn(),
     },
   },
@@ -14,6 +16,8 @@ vi.mock('../lib/prisma.js', () => ({
 import { prisma } from '../lib/prisma.js'
 
 const mockFindUnique = vi.mocked(prisma.user.findUnique)
+const mockFindMany = vi.mocked(prisma.user.findMany)
+const mockCount = vi.mocked(prisma.user.count)
 const mockUpdate = vi.mocked(prisma.user.update)
 
 const mockUser = {
@@ -110,5 +114,52 @@ describe('adminUpdateUser', () => {
       data: { dateOfBirth: dob },
       include: { roles: true },
     })
+  })
+})
+
+describe('listUsers', () => {
+  const users = [mockUser, { ...mockUser, id: 'user_456', email: 'other@example.com' }]
+
+  beforeEach(() => {
+    mockFindMany.mockResolvedValue(users as never)
+    mockCount.mockResolvedValue(2 as never)
+  })
+
+  it('returns paginated users with total and page metadata', async () => {
+    const result = await listUsers({ page: 1, pageSize: 10 })
+
+    expect(result).toEqual({ data: users, total: 2, page: 1, totalPages: 1 })
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, take: 10, include: { roles: true } })
+    )
+    expect(mockCount).toHaveBeenCalledWith(expect.objectContaining({ where: {} }))
+  })
+
+  it('applies skip correctly for page 2', async () => {
+    await listUsers({ page: 2, pageSize: 10 })
+
+    expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 10, take: 10 }))
+  })
+
+  it('filters by search term across firstName, lastName, and email', async () => {
+    await listUsers({ page: 1, pageSize: 10, search: 'yoga' })
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [
+            { firstName: { contains: 'yoga', mode: 'insensitive' } },
+            { lastName: { contains: 'yoga', mode: 'insensitive' } },
+            { email: { contains: 'yoga', mode: 'insensitive' } },
+          ],
+        },
+      })
+    )
+  })
+
+  it('uses empty where clause when no search term is provided', async () => {
+    await listUsers({ page: 1, pageSize: 10 })
+
+    expect(mockCount).toHaveBeenCalledWith(expect.objectContaining({ where: {} }))
   })
 })
