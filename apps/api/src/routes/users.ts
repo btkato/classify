@@ -14,6 +14,19 @@ const updateProfileSchema = z.object({
 })
 
 usersRouter.get(
+  '/me',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!req.auth?.userId) {
+      res.status(401).json({ error: { message: 'Unauthorized' } })
+      return
+    }
+    const user = await userService.getUserById(req.auth.userId)
+    res.json(user)
+  })
+)
+
+usersRouter.get(
   '/:id',
   requireAuth,
   asyncHandler(async (req, res) => {
