@@ -275,13 +275,14 @@ export async function cancelLessonSetRegistration(
           registration.membership !== null &&
           registration.membership.classesRemaining !== null
         ) {
+          const refundEntry = { id: registration.id, membershipId: registration.membershipId }
           const group = refundGroups.get(registration.membershipId)
           if (group) {
-            group.registrations.push(registration)
+            group.registrations.push(refundEntry)
           } else {
             refundGroups.set(registration.membershipId, {
               baseBalance: registration.membership.classesRemaining,
-              registrations: [registration],
+              registrations: [refundEntry],
             })
           }
         }
