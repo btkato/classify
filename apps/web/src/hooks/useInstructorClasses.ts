@@ -7,9 +7,10 @@ interface UseInstructorClassesOptions {
   page?: number
   from?: string
   to?: string
+  status?: string
 }
 
-export function useInstructorClasses({ page = 1, from, to }: UseInstructorClassesOptions = {}) {
+export function useInstructorClasses({ page = 1, from, to, status }: UseInstructorClassesOptions = {}) {
   const { data: currentUser, isLoading } = useCurrentUser()
 
   const params = new URLSearchParams()
@@ -17,9 +18,10 @@ export function useInstructorClasses({ page = 1, from, to }: UseInstructorClasse
   params.set('page', String(page))
   if (from) params.set('from', from)
   if (to) params.set('to', to)
+  if (status) params.set('status', status)
 
   return useQuery({
-    queryKey: ['instructor-classes', { instructorId: currentUser?.id, page, from, to }],
+    queryKey: ['instructor-classes', { instructorId: currentUser?.id, page, from, to, status }],
     enabled: !isLoading && !!currentUser?.id,
     queryFn: () => apiFetch<ClassPage>(`/classes?${params.toString()}`),
     staleTime: 1000 * 60,

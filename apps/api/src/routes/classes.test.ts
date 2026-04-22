@@ -233,6 +233,16 @@ describe('GET /classes', () => {
     )
   })
 
+  it('passes status query param to the service', async () => {
+    mockListClasses.mockResolvedValue(emptyPageResult as never)
+
+    await request(app).get('/classes?status=COMPLETED')
+
+    expect(mockListClasses).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'COMPLETED' })
+    )
+  })
+
   it('passes page and pageSize query params to the service', async () => {
     mockListClasses.mockResolvedValue(emptyPageResult as never)
 

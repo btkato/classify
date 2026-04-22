@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js'
 import { NotFoundError, ValidationError, ForbiddenError } from '../lib/errors.js'
-import type { Class, Prisma } from 'db'
+import type { Class, ClassStatus, Prisma } from 'db'
 
 type RegistrationWithUser = Prisma.RegistrationGetPayload<{
   include: {
@@ -18,6 +18,7 @@ type RegistrationWithUser = Prisma.RegistrationGetPayload<{
 interface ListClassesInput {
   categoryId?: string
   instructorId?: string
+  status?: ClassStatus
   from?: Date
   to?: Date
   page?: number
@@ -49,10 +50,11 @@ export async function listClasses(input: ListClassesInput): Promise<ClassPage> {
   const pageSize = input.pageSize ?? 10
   const skip = (page - 1) * pageSize
 
+  const defaultStatus = input.instructorId ? undefined : ('ACTIVE' as const)
   const where = {
     categoryId: input.categoryId,
     instructorId: input.instructorId,
-    ...(input.instructorId ? {} : { status: 'ACTIVE' as const }),
+    status: input.status ?? defaultStatus,
     startsAt: {
       gte: input.instructorId ? input.from : (input.from ?? new Date()),
       lte: input.to,
