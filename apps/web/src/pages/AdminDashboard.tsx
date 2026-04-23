@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Users, CalendarDays, CreditCard, LayoutList, Tag } from 'lucide-react'
+import { Users, CalendarDays, CreditCard, LayoutList, Tag, ChevronRight } from 'lucide-react'
 import { useClasses } from '../hooks/useClasses'
 import { useAdminUsers } from '../hooks/useAdminUsers'
 import { useAdminMemberships } from '../hooks/useAdminMemberships'
@@ -73,7 +73,7 @@ export default function AdminDashboard() {
             >
               <Icon className="h-4 w-4 text-muted-foreground" />
               {label}
-              <span className="ml-auto text-xs text-muted-foreground">→</span>
+              <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
             </Link>
           ))}
         </div>

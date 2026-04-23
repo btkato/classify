@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useInstructorClasses } from '../hooks/useInstructorClasses'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { Skeleton } from '../components/ui/skeleton'
 import type { Class } from '../lib/types'
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
@@ -55,20 +56,27 @@ export default function InstructorDashboard() {
     page: allClassesPage,
   })
 
+  const upcomingClasses = upcomingPage?.data ?? []
+  const allClasses = classesPage?.data ?? []
+
   if (upcomingLoading || classesLoading) {
     return (
-      <main className="container mx-auto px-4 py-8">
-        <p>Loading...</p>
+      <main className="container mx-auto px-4 py-8 max-w-3xl" data-testid="loading-skeleton">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <div className="mt-6 flex flex-col gap-3">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
       </main>
     )
   }
 
-  const upcomingClasses = upcomingPage?.data ?? []
-  const allClasses = classesPage?.data ?? []
-
   return (
     <main className="container mx-auto px-4 py-8 max-w-3xl">
-      <section>
+      <h1 className="text-2xl font-bold">Dashboard</h1>
+
+      <section className="mt-8">
         <h2 className="text-lg font-semibold">Upcoming This Week</h2>
 
         {upcomingClasses.length === 0 ? (

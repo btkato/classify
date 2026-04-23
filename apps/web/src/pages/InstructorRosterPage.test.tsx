@@ -75,7 +75,7 @@ describe('InstructorRosterPage', () => {
 
     renderPage()
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument()
   })
 
   it('renders the class title as the page heading', async () => {

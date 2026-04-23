@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useRoster } from '../hooks/useRoster'
 import { useClass } from '../hooks/useClass'
 import { Badge } from '../components/ui/badge'
+import { Skeleton } from '../components/ui/skeleton'
 import type { RosterEntry } from '../hooks/useRoster'
 
 function RosterRow({ entry }: { entry: RosterEntry }) {
@@ -25,8 +26,14 @@ export default function InstructorRosterPage() {
 
   if (classLoading || rosterLoading) {
     return (
-      <main className="container mx-auto px-4 py-8">
-        <p>Loading...</p>
+      <main className="container mx-auto px-4 py-8 max-w-2xl" data-testid="loading-skeleton">
+        <Skeleton className="h-4 w-32" />
+        <div className="mt-6 space-y-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
       </main>
     )
   }

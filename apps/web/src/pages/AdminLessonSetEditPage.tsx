@@ -86,7 +86,10 @@ export default function AdminLessonSetEditPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="description">Description</Label>
+          <div className="flex items-baseline gap-1.5">
+            <Label htmlFor="description">Description</Label>
+            <span className="text-muted-foreground text-xs">(optional)</span>
+          </div>
           <Textarea
             id="description"
             value={description}

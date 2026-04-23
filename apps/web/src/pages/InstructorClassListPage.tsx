@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useInstructorClasses } from '../hooks/useInstructorClasses'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { Skeleton } from '../components/ui/skeleton'
 import type { Class } from '../lib/types'
 
 const STATUS_FILTERS = [
@@ -61,15 +62,26 @@ export default function InstructorClassListPage() {
 
   if (isLoading) {
     return (
-      <main className="container mx-auto px-4 py-8">
-        <p>Loading...</p>
+      <main className="container mx-auto px-4 py-8 max-w-3xl" data-testid="loading-skeleton">
+        <Link to="/instructor" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Back to Dashboard
+        </Link>
+        <div className="mt-6 flex flex-col gap-3">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
       </main>
     )
   }
 
   return (
     <main className="container mx-auto px-4 py-8 max-w-3xl">
-      <h1 className="text-2xl font-bold">My Classes</h1>
+      <Link to="/instructor" className="text-sm text-muted-foreground hover:text-foreground">
+        ← Back to Dashboard
+      </Link>
+
+      <h1 className="mt-6 text-2xl font-bold">My Classes</h1>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {STATUS_FILTERS.map((filter) => (

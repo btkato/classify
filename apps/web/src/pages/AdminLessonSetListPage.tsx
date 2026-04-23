@@ -12,6 +12,10 @@ import {
   TableRow,
 } from '../components/ui/table'
 
+function formatEnrollmentType(type: string): string {
+  return type === 'FULL_SET' ? 'Full Set' : 'Drop-in'
+}
+
 export default function AdminLessonSetListPage() {
   const { data: lessonSets, isLoading } = useLessonSets()
 
@@ -35,6 +39,8 @@ export default function AdminLessonSetListPage() {
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
+        ) : lessonSets?.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">No lesson sets yet.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -50,7 +56,7 @@ export default function AdminLessonSetListPage() {
               {lessonSets?.map((lessonSet) => (
                 <TableRow key={lessonSet.id}>
                   <TableCell className="font-medium">{lessonSet.title}</TableCell>
-                  <TableCell className="text-muted-foreground">{lessonSet.enrollmentType}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatEnrollmentType(lessonSet.enrollmentType)}</TableCell>
                   <TableCell className="text-muted-foreground">{lessonSet.totalSessions}</TableCell>
                   <TableCell>
                     <Badge variant={lessonSet.status === 'ACTIVE' ? 'default' : 'secondary'}>

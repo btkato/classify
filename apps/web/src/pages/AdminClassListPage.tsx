@@ -109,6 +109,8 @@ export default function AdminClassListPage() {
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
+        ) : data?.data.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">No classes found.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -125,7 +127,7 @@ export default function AdminClassListPage() {
                 <TableRow key={classDetail.id}>
                   <TableCell className="font-medium">{classDetail.title}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {categoryMap.get(classDetail.categoryId) ?? classDetail.categoryId}
+                    {categoryMap.get(classDetail.categoryId) ?? '—'}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDate(classDetail.startsAt)}
