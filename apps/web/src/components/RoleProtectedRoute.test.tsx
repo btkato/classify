@@ -18,7 +18,7 @@ import { useAuth } from '@clerk/clerk-react'
 const mockUseCurrentUser = vi.mocked(useCurrentUser)
 const mockUseAuth = vi.mocked(useAuth)
 
-function renderRoute(role: string) {
+function renderRoute(role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
