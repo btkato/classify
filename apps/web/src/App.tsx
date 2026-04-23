@@ -16,6 +16,15 @@ import InstructorClassDetailPage from './pages/InstructorClassDetailPage'
 import InstructorRosterPage from './pages/InstructorRosterPage'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminCategoryPage from './pages/AdminCategoryPage'
+import AdminUserListPage from './pages/AdminUserListPage'
+import AdminUserDetailPage from './pages/AdminUserDetailPage'
+import AdminMembershipPage from './pages/AdminMembershipPage'
+import AdminClassListPage from './pages/AdminClassListPage'
+import AdminClassFormPage from './pages/AdminClassFormPage'
+import AdminClassEditPage from './pages/AdminClassEditPage'
+import AdminLessonSetListPage from './pages/AdminLessonSetListPage'
+import AdminLessonSetFormPage from './pages/AdminLessonSetFormPage'
+import AdminLessonSetEditPage from './pages/AdminLessonSetEditPage'
 
 const locationStateSchema = z.object({ from: z.object({ pathname: z.string() }) }).nullable()
 
@@ -127,6 +136,105 @@ export default function App() {
             <ProtectedRoute>
               <RoleProtectedRoute role="ADMIN">
                 <AdminCategoryPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="ADMIN">
+                <AdminUserListPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/users/:id"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="ADMIN">
+                <AdminUserDetailPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/memberships"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="ADMIN">
+                <AdminMembershipPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/classes"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="ADMIN">
+                <AdminClassListPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/classes/new"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="ADMIN">
+                <AdminClassFormPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/classes/:id"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="ADMIN">
+                <AdminClassEditPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/lesson-sets"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="ADMIN">
+                <AdminLessonSetListPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/lesson-sets/new"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="ADMIN">
+                <AdminLessonSetFormPage />
+              </RoleProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/lesson-sets/:id"
+          element={
+            <ProtectedRoute>
+              <RoleProtectedRoute role="ADMIN">
+                <AdminLessonSetEditPage />
               </RoleProtectedRoute>
             </ProtectedRoute>
           }
