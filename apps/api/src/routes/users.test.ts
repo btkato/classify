@@ -73,6 +73,13 @@ describe('GET /users/:id', () => {
     expect(res.status).toBe(401)
   })
 
+  it('returns 403 when fetching another user\'s profile', async () => {
+    const res = await request(app).get('/users/different_user_456')
+
+    expect(res.status).toBe(403)
+    expect(res.body).toEqual({ error: { message: 'Forbidden' } })
+  })
+
   it('returns 404 when user does not exist', async () => {
     mockGetUserById.mockRejectedValue(new NotFoundError('User not found'))
 

@@ -1,6 +1,7 @@
 import express from 'express'
 import { z } from 'zod'
 import { ClassStatus } from 'db'
+import { getAuth } from '@clerk/express'
 import { requireAuth } from '../middleware/requireAuth.js'
 import { requireRoles } from '../middleware/requireRoles.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
@@ -25,11 +26,11 @@ const listClassesQuerySchema = z
 
 const updateClassBodySchema = z.object({
   title: z.string().min(1).optional(),
-  description: z.string().min(1).optional(),
+  description: z.string().min(1).nullable().optional(),
   capacity: z.number().int().min(1).optional(),
   startsAt: z.coerce.date().optional(),
   durationMinutes: z.number().int().min(1).optional(),
-  location: z.string().min(1).optional(),
+  location: z.string().min(1).nullable().optional(),
 })
 
 const createClassBodySchema = z.object({
@@ -47,11 +48,20 @@ classesRouter.get(
   '/',
   asyncHandler(async (req, res) => {
     const query = listClassesQuerySchema.parse(req.query)
+
+    const { userId } = getAuth(req)
+    const needsAuth = !!query.instructorId || (query.status !== undefined && query.status !== 'ACTIVE')
+    if (needsAuth && !userId) {
+      res.status(401).json({ error: { message: 'Unauthorized' } })
+      return
+    }
+
+    const isPublicCatalog = !query.instructorId && query.status === undefined
     const result = await listClasses({
       categoryId: query.categoryId,
       instructorId: query.instructorId,
-      status: query.status,
-      from: query.from,
+      status: isPublicCatalog ? 'ACTIVE' : query.status,
+      from: query.from ?? (isPublicCatalog ? new Date() : undefined),
       to: query.to,
       page: query.page,
       pageSize: query.pageSize,

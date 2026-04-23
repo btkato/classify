@@ -97,17 +97,19 @@ describe('listClasses', () => {
     mockCount.mockResolvedValue(0)
   })
 
-  it('queries ACTIVE classes with startsAt >= now when no filters provided', async () => {
+  it('passes no implicit defaults when called with empty input', async () => {
     mockFindMany.mockResolvedValue([])
 
     await listClasses({})
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          status: 'ACTIVE',
-          startsAt: expect.objectContaining({ gte: expect.any(Date) }),
-        }),
+        where: {
+          categoryId: undefined,
+          instructorId: undefined,
+          status: undefined,
+          startsAt: undefined,
+        },
         orderBy: { startsAt: 'asc' },
       })
     )
@@ -236,16 +238,14 @@ describe('listClasses', () => {
     )
   })
 
-  it('does not apply startsAt gte default when instructorId is provided', async () => {
+  it('does not set a startsAt filter when no from or to is provided', async () => {
     mockFindMany.mockResolvedValue([])
 
     await listClasses({ instructorId: 'user_1' })
 
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          startsAt: expect.objectContaining({ gte: undefined }),
-        }),
+        where: expect.objectContaining({ startsAt: undefined }),
       })
     )
   })

@@ -55,7 +55,7 @@ export default function InstructorClassDetailPage() {
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
-    updateClass.mutate({ description: description || undefined, location: location || undefined })
+    updateClass.mutate({ description: description || null, location: location || null })
   }
 
   return (
