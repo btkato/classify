@@ -4,6 +4,7 @@ import { Check, ChevronsUpDown } from 'lucide-react'
 import { useCreateLessonSet } from '../hooks/useCreateLessonSet'
 import { useClassCategories } from '../hooks/useClassCategories'
 import { useInstructors } from '../hooks/useInstructors'
+import { useDebounce } from '../hooks/useDebounce'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
@@ -48,7 +49,8 @@ export default function AdminLessonSetFormPage() {
   const [comboboxOpen, setComboboxOpen] = useState(false)
   const [comboboxSearch, setComboboxSearch] = useState('')
 
-  const { data: instructors } = useInstructors(comboboxSearch || undefined)
+  const debouncedSearch = useDebounce(comboboxSearch, 200)
+  const { data: instructors } = useInstructors(debouncedSearch || undefined)
   const selectedInstructor = instructors?.find((instructor) => instructor.id === instructorId)
 
   function handleSubmit(event: React.FormEvent) {
@@ -142,10 +144,10 @@ export default function AdminLessonSetFormPage() {
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-full p-0">
-              <Command>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+              <Command shouldFilter={false}>
                 <CommandInput
-                  placeholder="Showing the first 100 instructors, type to search"
+                  placeholder="Search instructors…"
                   value={comboboxSearch}
                   onValueChange={setComboboxSearch}
                 />
