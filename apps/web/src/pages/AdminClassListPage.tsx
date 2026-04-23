@@ -44,7 +44,7 @@ export default function AdminClassListPage() {
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
 
-  const { data, isLoading } = useAdminClasses({ status: statusFilter, categoryId, page, pageSize: 20 })
+  const { data, isLoading } = useAdminClasses({ status: statusFilter, categoryId, page, pageSize: 20, standalone: true })
   const { data: categories } = useClassCategories()
 
   const categoryMap = new Map(categories?.map((c) => [c.id, c.name]))

@@ -8,20 +8,22 @@ interface UseAdminClassesParams {
   categoryId?: string
   page?: number
   pageSize?: number
+  standalone?: boolean
 }
 
 export function useAdminClasses(params: UseAdminClassesParams = {}) {
   const { getToken } = useAuth()
-  const { status, categoryId, page = 1, pageSize = 20 } = params
+  const { status, categoryId, page = 1, pageSize = 20, standalone } = params
 
   const queryParams = new URLSearchParams()
   queryParams.set('page', String(page))
   queryParams.set('pageSize', String(pageSize))
   if (status) queryParams.set('status', status)
   if (categoryId) queryParams.set('categoryId', categoryId)
+  if (standalone) queryParams.set('standalone', 'true')
 
   return useQuery({
-    queryKey: ['admin-classes', { status, categoryId, page, pageSize }],
+    queryKey: ['admin-classes', { status, categoryId, page, pageSize, standalone }],
     queryFn: async () => {
       const token = await getToken()
       return apiFetch<ClassPage>(`/classes?${queryParams.toString()}`, token ?? undefined)
