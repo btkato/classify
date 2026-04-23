@@ -7,6 +7,13 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Textarea } from '../components/ui/textarea'
 import { Skeleton } from '../components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select'
 
 function toDatetimeLocal(iso: string) {
   return new Date(iso).toISOString().slice(0, 16)
@@ -24,6 +31,7 @@ export default function AdminClassEditPage() {
   const [durationMinutes, setDurationMinutes] = useState(0)
   const [capacity, setCapacity] = useState(0)
   const [location, setLocation] = useState('')
+  const [status, setStatus] = useState(classDetail?.status ?? '')
 
   useEffect(() => {
     if (classDetail) {
@@ -33,6 +41,7 @@ export default function AdminClassEditPage() {
       setDurationMinutes(classDetail.durationMinutes)
       setCapacity(classDetail.capacity)
       setLocation(classDetail.location ?? '')
+      setStatus(classDetail.status)
     }
   }, [classDetail])
 
@@ -67,6 +76,7 @@ export default function AdminClassEditPage() {
         durationMinutes,
         capacity,
         location: location || undefined,
+        status,
       },
       { onSuccess: () => navigate('/admin/classes') }
     )
@@ -89,6 +99,21 @@ export default function AdminClassEditPage() {
             onChange={(e) => setTitle(e.target.value)}
             required
           />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="status">Status</Label>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger id="status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="DRAFT">Draft</SelectItem>
+              <SelectItem value="ACTIVE">Active</SelectItem>
+              <SelectItem value="CANCELLED">Cancelled</SelectItem>
+              <SelectItem value="COMPLETED">Completed</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-1.5">

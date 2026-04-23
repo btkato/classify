@@ -87,6 +87,19 @@ describe('AdminClassEditPage', () => {
     )
   })
 
+  it('includes status in the mutate call on submit', async () => {
+    renderPage()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() =>
+      expect(mockMutate).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'ACTIVE' }),
+        expect.any(Object)
+      )
+    )
+  })
+
   it('navigates to /admin/classes on successful save', async () => {
     mockUseAdminUpdateClass.mockReturnValue({
       mutate: vi.fn().mockImplementation((_data, options) => options.onSuccess()),

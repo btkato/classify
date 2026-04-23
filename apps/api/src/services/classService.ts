@@ -101,6 +101,7 @@ interface UpdateClassInput {
   startsAt?: Date
   durationMinutes?: number
   location?: string | null
+  status?: ClassStatus
 }
 
 export async function updateClass(
@@ -119,7 +120,7 @@ export async function updateClass(
     throw new ForbiddenError('You do not have permission to update this class')
   }
 
-  const adminOnlyFields: (keyof UpdateClassInput)[] = ['title', 'capacity', 'startsAt', 'durationMinutes']
+  const adminOnlyFields: (keyof UpdateClassInput)[] = ['title', 'capacity', 'startsAt', 'durationMinutes', 'status']
   if (!isAdmin && adminOnlyFields.some((field) => input[field] !== undefined)) {
     throw new ForbiddenError('Instructors may only update description and location')
   }
