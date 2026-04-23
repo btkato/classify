@@ -70,8 +70,8 @@ describe('AdminLessonSetListPage', () => {
 
   it('renders enrollment type and session count', () => {
     renderPage()
-    expect(screen.getByText('FULL_SET')).toBeInTheDocument()
-    expect(screen.getByText('DROP_IN')).toBeInTheDocument()
+    expect(screen.getByText('Full Set')).toBeInTheDocument()
+    expect(screen.getByText('Drop-in')).toBeInTheDocument()
     expect(screen.getByText('6')).toBeInTheDocument()
     expect(screen.getByText('4')).toBeInTheDocument()
   })

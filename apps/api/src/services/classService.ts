@@ -23,6 +23,7 @@ interface ListClassesInput {
   to?: Date
   page?: number
   pageSize?: number
+  standalone?: boolean
 }
 
 export interface ClassPage {
@@ -60,6 +61,7 @@ export async function listClasses(input: ListClassesInput): Promise<ClassPage> {
     instructorId: input.instructorId,
     status: input.status,
     startsAt,
+    lessonSetId: input.standalone ? null : undefined,
   }
 
   const [data, total] = await Promise.all([

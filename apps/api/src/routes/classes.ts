@@ -18,6 +18,7 @@ const listClassesQuerySchema = z
     to: z.coerce.date().optional(),
     page: z.coerce.number().int().min(1).optional(),
     pageSize: z.coerce.number().int().min(1).optional(),
+    standalone: z.coerce.boolean().optional(),
   })
   .refine((query) => !query.from || !query.to || query.from <= query.to, {
     path: ['to'],
@@ -65,6 +66,7 @@ classesRouter.get(
       to: query.to,
       page: query.page,
       pageSize: query.pageSize,
+      standalone: query.standalone,
     })
     res.status(200).json(result)
   })

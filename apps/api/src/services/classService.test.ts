@@ -109,6 +109,7 @@ describe('listClasses', () => {
           instructorId: undefined,
           status: undefined,
           startsAt: undefined,
+          lessonSetId: undefined,
         },
         orderBy: { startsAt: 'asc' },
       })
@@ -246,6 +247,30 @@ describe('listClasses', () => {
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ startsAt: undefined }),
+      })
+    )
+  })
+
+  it('includes lessonSetId: null in the where clause when standalone is true', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    await listClasses({ standalone: true })
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ lessonSetId: null }),
+      })
+    )
+  })
+
+  it('does not filter by lessonSetId when standalone is not provided', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    await listClasses({})
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ lessonSetId: undefined }),
       })
     )
   })
