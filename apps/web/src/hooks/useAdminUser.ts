@@ -10,7 +10,7 @@ export function useAdminUser(id: string) {
     queryKey: ['admin-user', id],
     queryFn: async () => {
       const token = await getToken()
-      return apiFetch<AdminUser>(`/users/${id}`, token ?? undefined)
+      return apiFetch<AdminUser>(`/admin/users/${id}`, token ?? undefined)
     },
     staleTime: 1000 * 60,
     enabled: !!id,

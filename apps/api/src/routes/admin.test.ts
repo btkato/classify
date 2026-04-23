@@ -27,6 +27,7 @@ vi.mock('../services/membershipService.js', () => ({
 
 vi.mock('../services/userService.js', () => ({
   listUsers: vi.fn(),
+  getUserById: vi.fn(),
 }))
 
 import { app } from '../app.js'
@@ -43,6 +44,7 @@ const mockRevokeRole = vi.mocked(roleService.revokeRole)
 const mockUpdateMembership = vi.mocked(membershipService.updateMembership)
 const mockListAllMemberships = vi.mocked(membershipService.listAllMemberships)
 const mockListUsers = vi.mocked(userService.listUsers)
+const mockGetUserById = vi.mocked(userService.getUserById)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -352,6 +354,59 @@ describe('GET /admin/memberships', () => {
       expect(mockListAllMemberships).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'ACTIVE' })
       )
+    })
+  })
+})
+
+describe('GET /admin/users/:id', () => {
+  const mockUser = {
+    id: 'user_1',
+    firstName: 'Jane',
+    lastName: 'Doe',
+    email: 'jane@example.com',
+    roles: [{ role: 'STUDENT' }],
+  }
+
+  beforeEach(() => {
+    mockGetUserById.mockResolvedValue(mockUser as never)
+  })
+
+  describe('authentication and authorisation', () => {
+    it('returns 401 when not authenticated', async () => {
+      mockGetAuth.mockReturnValue({ userId: null } as never)
+
+      const res = await request(app).get('/admin/users/user_1')
+
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 403 when authenticated as STUDENT', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'STUDENT' }] as never)
+
+      const res = await request(app).get('/admin/users/user_1')
+
+      expect(res.status).toBe(403)
+    })
+  })
+
+  describe('success', () => {
+    it('returns 200 with the user when admin', async () => {
+      const res = await request(app).get('/admin/users/user_1')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ id: 'user_1', firstName: 'Jane' })
+      expect(mockGetUserById).toHaveBeenCalledWith('user_1')
+    })
+  })
+
+  describe('error handling', () => {
+    it('returns 404 when user does not exist', async () => {
+      const { NotFoundError } = await import('../lib/errors.js')
+      mockGetUserById.mockRejectedValue(new NotFoundError('User not found'))
+
+      const res = await request(app).get('/admin/users/nonexistent')
+
+      expect(res.status).toBe(404)
     })
   })
 })

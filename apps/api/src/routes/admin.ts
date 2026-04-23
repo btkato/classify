@@ -6,7 +6,7 @@ import { requireRoles } from '../middleware/requireRoles.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import { grantRole, revokeRole } from '../services/roleService.js'
 import { updateMembership, listAllMemberships } from '../services/membershipService.js'
-import { listUsers } from '../services/userService.js'
+import { listUsers, getUserById } from '../services/userService.js'
 
 export const adminRouter = express.Router()
 
@@ -25,6 +25,19 @@ adminRouter.get(
     const query = listUsersQuerySchema.parse(req.query)
     const result = await listUsers(query)
     res.status(200).json(result)
+  })
+)
+
+const adminUserParamsSchema = z.object({ id: z.string().min(1) })
+
+adminRouter.get(
+  '/users/:id',
+  requireAuth,
+  requireRoles(['ADMIN']),
+  asyncHandler(async (req, res) => {
+    const { id } = adminUserParamsSchema.parse(req.params)
+    const user = await getUserById(id)
+    res.status(200).json(user)
   })
 )
 

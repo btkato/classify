@@ -273,13 +273,39 @@ describe('GET /classes', () => {
     )
   })
 
-  it('does not require authentication', async () => {
+  it('does not require authentication for a plain public request', async () => {
     mockGetAuth.mockReturnValue({ userId: null } as never)
     mockListClasses.mockResolvedValue(emptyPageResult as never)
 
     const res = await request(app).get('/classes')
 
     expect(res.status).toBe(200)
+  })
+
+  it('returns 401 when instructorId filter is used without authentication', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+
+    const res = await request(app).get('/classes?instructorId=user_1')
+
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 401 when a non-ACTIVE status filter is used without authentication', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+
+    const res = await request(app).get('/classes?status=DRAFT')
+
+    expect(res.status).toBe(401)
+  })
+
+  it('passes status ACTIVE and a current-time from to the service when no filters are provided', async () => {
+    mockListClasses.mockResolvedValue(emptyPageResult as never)
+
+    await request(app).get('/classes')
+
+    expect(mockListClasses).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'ACTIVE', from: expect.any(Date) })
+    )
   })
 
   it('returns 400 when from is after to', async () => {

@@ -4,8 +4,8 @@ import { apiFetch } from '../lib/api'
 import type { Class } from '../lib/types'
 
 interface UpdateClassInput {
-  description?: string
-  location?: string
+  description?: string | null
+  location?: string | null
 }
 
 export function useUpdateClass(classId: string) {

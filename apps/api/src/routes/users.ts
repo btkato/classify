@@ -33,6 +33,11 @@ usersRouter.get(
     const { id } = req.params
     if (!id) throw new NotFoundError('User not found')
 
+    if (req.auth?.userId !== id) {
+      res.status(403).json({ error: { message: 'Forbidden' } })
+      return
+    }
+
     const user = await userService.getUserById(id)
     res.json(user)
   })

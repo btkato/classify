@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 
 interface RoleProtectedRouteProps {
-  role: string
+  role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT'
   children: React.ReactNode
 }
 

@@ -50,15 +50,16 @@ export async function listClasses(input: ListClassesInput): Promise<ClassPage> {
   const pageSize = input.pageSize ?? 10
   const skip = (page - 1) * pageSize
 
-  const defaultStatus = input.instructorId ? undefined : ('ACTIVE' as const)
+  const startsAt =
+    input.from !== undefined || input.to !== undefined
+      ? { gte: input.from, lte: input.to }
+      : undefined
+
   const where = {
     categoryId: input.categoryId,
     instructorId: input.instructorId,
-    status: input.status ?? defaultStatus,
-    startsAt: {
-      gte: input.instructorId ? input.from : (input.from ?? new Date()),
-      lte: input.to,
-    },
+    status: input.status,
+    startsAt,
   }
 
   const [data, total] = await Promise.all([
@@ -93,11 +94,11 @@ export async function getClass(id: string): Promise<ClassWithEnrolledCount> {
 
 interface UpdateClassInput {
   title?: string
-  description?: string
+  description?: string | null
   capacity?: number
   startsAt?: Date
   durationMinutes?: number
-  location?: string
+  location?: string | null
 }
 
 export async function updateClass(
