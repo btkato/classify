@@ -32,6 +32,7 @@ const updateClassBodySchema = z.object({
   startsAt: z.coerce.date().optional(),
   durationMinutes: z.number().int().min(1).optional(),
   location: z.string().min(1).nullable().optional(),
+  status: z.nativeEnum(ClassStatus).optional(),
 })
 
 const createClassBodySchema = z.object({

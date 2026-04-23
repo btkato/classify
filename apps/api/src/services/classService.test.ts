@@ -412,6 +412,12 @@ describe('updateClass', () => {
       expect(mockUpdate).not.toHaveBeenCalled()
     })
 
+    it('throws ForbiddenError when instructor tries to update status', async () => {
+      await expect(updateClass('class_1', { status: 'CANCELLED' }, 'user_1', false)).rejects.toThrow(ForbiddenError)
+
+      expect(mockUpdate).not.toHaveBeenCalled()
+    })
+
     it('allows instructor to update description', async () => {
       mockUpdate.mockResolvedValue(existingClass as never)
 
@@ -436,6 +442,20 @@ describe('updateClass', () => {
       ).resolves.not.toThrow()
 
       expect(mockUpdate).toHaveBeenCalled()
+    })
+
+    it('allows admin to update status', async () => {
+      const updatedClass = { ...existingClass, status: 'CANCELLED' }
+      mockUpdate.mockResolvedValue(updatedClass as never)
+
+      await expect(
+        updateClass('class_1', { status: 'CANCELLED' }, 'other_user', true)
+      ).resolves.not.toThrow()
+
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { id: 'class_1' },
+        data: expect.objectContaining({ status: 'CANCELLED' }),
+      })
     })
   })
 })

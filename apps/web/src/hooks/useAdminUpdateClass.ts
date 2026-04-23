@@ -10,6 +10,7 @@ interface AdminUpdateClassInput {
   startsAt?: string
   durationMinutes?: number
   location?: string
+  status?: string
 }
 
 export function useAdminUpdateClass(classId: string) {
