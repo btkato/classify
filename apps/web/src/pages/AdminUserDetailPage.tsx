@@ -51,7 +51,13 @@ export default function AdminUserDetailPage() {
     )
   }
 
-  if (!user) return null
+  if (!user) {
+    return (
+      <main className="container mx-auto px-4 py-8">
+        <p className="text-muted-foreground">User not found.</p>
+      </main>
+    )
+  }
 
   const heldRoles = new Set(user.roles.map((r) => r.role))
 

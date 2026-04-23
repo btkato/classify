@@ -67,7 +67,7 @@ describe('InstructorClassListPage', () => {
 
     renderPage()
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument()
   })
 
   it('renders class cards when loaded', async () => {

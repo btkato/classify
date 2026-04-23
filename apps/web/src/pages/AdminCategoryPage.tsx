@@ -7,14 +7,6 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -53,7 +45,11 @@ export default function AdminCategoryPage() {
         ← Back to Admin
       </Link>
 
-      <h1 className="mt-6 text-2xl font-bold">Categories</h1>
+      <h1 className="mt-6 text-2xl font-bold">Manage Class Categories</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Categories help students filter and discover classes. Add a category here, then assign it
+        when creating a class or lesson set.
+      </p>
 
       <form onSubmit={handleCreate} className="mt-6 flex gap-2">
         <Input
@@ -75,32 +71,21 @@ export default function AdminCategoryPage() {
             <Skeleton className="h-8 w-full" />
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories?.map((category) => (
-                <TableRow key={category.id}>
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      data-testid={`delete-${category.id}`}
-                      onClick={() => setCategoryToDelete(category)}
-                    >
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="divide-y rounded-md border">
+            {categories?.map((category) => (
+              <div key={category.id} className="flex items-center justify-between px-4 py-3">
+                <span className="font-medium">{category.name}</span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  data-testid={`delete-${category.id}`}
+                  onClick={() => setCategoryToDelete(category)}
+                >
+                  Delete
+                </Button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

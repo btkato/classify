@@ -43,10 +43,10 @@ export default function AdminUserListPage() {
         ← Back to Admin
       </Link>
 
-      <div className="mt-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Users</h1>
-        {data && <span className="text-sm text-muted-foreground">{data.total} total</span>}
-      </div>
+      <h1 className="mt-6 text-2xl font-bold">Users</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        View and manage user accounts. Click a user to see their profile and manage their roles.
+      </p>
 
       <div className="mt-4">
         <Input

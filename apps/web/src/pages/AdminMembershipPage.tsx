@@ -79,10 +79,11 @@ export default function AdminMembershipPage() {
         ← Back to Admin
       </Link>
 
-      <div className="mt-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Memberships</h1>
-        {data && <span className="text-sm text-muted-foreground">{data.total} total</span>}
-      </div>
+      <h1 className="mt-6 text-2xl font-bold">Memberships</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        View and manage all student memberships. Use the status filter to find active, expired, or
+        cancelled memberships.
+      </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {STATUS_FILTERS.map((filter) => (
