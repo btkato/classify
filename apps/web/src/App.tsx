@@ -1,30 +1,32 @@
+import { lazy } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { SignIn, SignUp } from '@clerk/clerk-react'
 import { z } from 'zod'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
-import ClassListPage from './pages/ClassListPage'
-import ClassDetailPage from './pages/ClassDetailPage'
-import StudentDashboard from './pages/StudentDashboard'
-import MyRegistrationsPage from './pages/MyRegistrationsPage'
-import MembershipsPage from './pages/MembershipsPage'
-import MembershipPurchasePage from './pages/MembershipPurchasePage'
-import InstructorDashboard from './pages/InstructorDashboard'
-import InstructorClassListPage from './pages/InstructorClassListPage'
-import InstructorClassDetailPage from './pages/InstructorClassDetailPage'
-import InstructorRosterPage from './pages/InstructorRosterPage'
-import AdminDashboard from './pages/AdminDashboard'
-import AdminCategoryPage from './pages/AdminCategoryPage'
-import AdminUserListPage from './pages/AdminUserListPage'
-import AdminUserDetailPage from './pages/AdminUserDetailPage'
-import AdminMembershipPage from './pages/AdminMembershipPage'
-import AdminClassListPage from './pages/AdminClassListPage'
-import AdminClassFormPage from './pages/AdminClassFormPage'
-import AdminClassEditPage from './pages/AdminClassEditPage'
-import AdminLessonSetListPage from './pages/AdminLessonSetListPage'
-import AdminLessonSetFormPage from './pages/AdminLessonSetFormPage'
-import AdminLessonSetEditPage from './pages/AdminLessonSetEditPage'
+
+const ClassListPage = lazy(() => import('./pages/ClassListPage'))
+const ClassDetailPage = lazy(() => import('./pages/ClassDetailPage'))
+const StudentDashboard = lazy(() => import('./pages/StudentDashboard'))
+const MyRegistrationsPage = lazy(() => import('./pages/MyRegistrationsPage'))
+const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
+const MembershipPurchasePage = lazy(() => import('./pages/MembershipPurchasePage'))
+const InstructorDashboard = lazy(() => import('./pages/InstructorDashboard'))
+const InstructorClassListPage = lazy(() => import('./pages/InstructorClassListPage'))
+const InstructorClassDetailPage = lazy(() => import('./pages/InstructorClassDetailPage'))
+const InstructorRosterPage = lazy(() => import('./pages/InstructorRosterPage'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const AdminCategoryPage = lazy(() => import('./pages/AdminCategoryPage'))
+const AdminUserListPage = lazy(() => import('./pages/AdminUserListPage'))
+const AdminUserDetailPage = lazy(() => import('./pages/AdminUserDetailPage'))
+const AdminMembershipPage = lazy(() => import('./pages/AdminMembershipPage'))
+const AdminClassListPage = lazy(() => import('./pages/AdminClassListPage'))
+const AdminClassFormPage = lazy(() => import('./pages/AdminClassFormPage'))
+const AdminClassEditPage = lazy(() => import('./pages/AdminClassEditPage'))
+const AdminLessonSetListPage = lazy(() => import('./pages/AdminLessonSetListPage'))
+const AdminLessonSetFormPage = lazy(() => import('./pages/AdminLessonSetFormPage'))
+const AdminLessonSetEditPage = lazy(() => import('./pages/AdminLessonSetEditPage'))
 
 const locationStateSchema = z.object({ from: z.object({ pathname: z.string() }) }).nullable()
 
@@ -37,211 +39,201 @@ function SignInPage() {
 export default function App() {
   return (
     <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<ClassListPage />} />
-        <Route path="/classes" element={<ClassListPage />} />
-        <Route path="/classes/:id" element={<ClassDetailPage />} />
+        <Route element={<Layout />}>
+          <Route index element={<ClassListPage />} />
+          <Route path="/classes" element={<ClassListPage />} />
+          <Route path="/classes/:id" element={<ClassDetailPage />} />
 
-        <Route path="/sign-in/*" element={<SignInPage />} />
-        <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
+          <Route path="/sign-in/*" element={<SignInPage />} />
+          <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
 
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <StudentDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/my-registrations"
-          element={
-            <ProtectedRoute>
-              <MyRegistrationsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/memberships"
-          element={
-            <ProtectedRoute>
-              <MembershipsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/memberships/purchase"
-          element={
-            <ProtectedRoute>
-              <MembershipPurchasePage />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <StudentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-registrations"
+            element={
+              <ProtectedRoute>
+                <MyRegistrationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/memberships"
+            element={
+              <ProtectedRoute>
+                <MembershipsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/memberships/purchase"
+            element={
+              <ProtectedRoute>
+                <MembershipPurchasePage />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/instructor"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="INSTRUCTOR">
-                <InstructorDashboard />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/instructor/classes"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="INSTRUCTOR">
-                <InstructorClassListPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/instructor/classes/:id"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="INSTRUCTOR">
-                <InstructorClassDetailPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/instructor/classes/:id/roster"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="INSTRUCTOR">
-                <InstructorRosterPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/instructor"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="INSTRUCTOR">
+                  <InstructorDashboard />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/instructor/classes"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="INSTRUCTOR">
+                  <InstructorClassListPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/instructor/classes/:id"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="INSTRUCTOR">
+                  <InstructorClassDetailPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/instructor/classes/:id/roster"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="INSTRUCTOR">
+                  <InstructorRosterPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="ADMIN">
-                <AdminDashboard />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminDashboard />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/categories"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminCategoryPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminUserListPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users/:id"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminUserDetailPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/memberships"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminMembershipPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/classes"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminClassListPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/classes/new"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminClassFormPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/classes/:id"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminClassEditPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/lesson-sets"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminLessonSetListPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/lesson-sets/new"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminLessonSetFormPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/lesson-sets/:id"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminLessonSetEditPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/admin/categories"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="ADMIN">
-                <AdminCategoryPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/users"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="ADMIN">
-                <AdminUserListPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/users/:id"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="ADMIN">
-                <AdminUserDetailPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/memberships"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="ADMIN">
-                <AdminMembershipPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/classes"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="ADMIN">
-                <AdminClassListPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/classes/new"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="ADMIN">
-                <AdminClassFormPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/classes/:id"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="ADMIN">
-                <AdminClassEditPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/lesson-sets"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="ADMIN">
-                <AdminLessonSetListPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/lesson-sets/new"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="ADMIN">
-                <AdminLessonSetFormPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/lesson-sets/:id"
-          element={
-            <ProtectedRoute>
-              <RoleProtectedRoute role="ADMIN">
-                <AdminLessonSetEditPage />
-              </RoleProtectedRoute>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route path="*" element={<p className="text-muted-foreground">404 — Page not found</p>} />
-      </Route>
-    </Routes>
+          <Route path="*" element={<p className="text-muted-foreground">404 — Page not found</p>} />
+        </Route>
+      </Routes>
   )
 }
