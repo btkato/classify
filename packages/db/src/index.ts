@@ -25,6 +25,7 @@ export {
   NotificationStatus,
   TriggerEvent,
   EnrollmentType,
+  ThreadType,
 } from '@prisma/client'
 
 export type {
@@ -42,4 +43,7 @@ export type {
   Announcement,
   NotificationJob,
   NotificationTrigger,
+  MessageThread,
+  ThreadParticipant,
+  Message,
 } from '@prisma/client'
