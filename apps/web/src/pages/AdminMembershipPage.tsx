@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAdminMemberships } from '../hooks/useAdminMemberships'
 import { useUpdateMembership } from '../hooks/useUpdateMembership'
+import { useDebounce } from '../hooks/useDebounce'
 import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import { Badge } from '../components/ui/badge'
 import { Skeleton } from '../components/ui/skeleton'
 import {
@@ -50,18 +52,27 @@ function StatusBadge({ status }: { status: string }) {
 export default function AdminMembershipPage() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
   const [membershipToCancel, setMembershipToCancel] = useState<AdminMembership | null>(null)
+
+  const debouncedSearch = useDebounce(search, 200)
 
   const { data, isLoading } = useAdminMemberships({
     page,
     pageSize: 20,
     status: statusFilter,
+    search: debouncedSearch || undefined,
   })
 
   const updateMembership = useUpdateMembership(membershipToCancel?.id ?? '')
 
   function handleStatusFilter(value: string | undefined) {
     setStatusFilter(value)
+    setPage(1)
+  }
+
+  function handleSearch(value: string) {
+    setSearch(value)
     setPage(1)
   }
 
@@ -85,7 +96,16 @@ export default function AdminMembershipPage() {
         cancelled memberships.
       </p>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4">
+        <Input
+          placeholder="Search by name or email…"
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
         {STATUS_FILTERS.map((filter) => (
           <Button
             key={filter.label}
