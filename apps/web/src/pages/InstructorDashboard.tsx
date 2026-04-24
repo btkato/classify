@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useInstructorClasses } from '../hooks/useInstructorClasses'
 import { Badge } from '../components/ui/badge'
@@ -44,13 +44,12 @@ function ClassCard({ classDetail }: { classDetail: Class & { enrolledCount?: num
 export default function InstructorDashboard() {
   const [allClassesPage, setAllClassesPage] = useState(1)
 
-  const now = new Date()
-  const sevenDaysFromNow = new Date(now.getTime() + SEVEN_DAYS_MS)
+  const { from, to } = useMemo(() => {
+    const now = new Date()
+    return { from: now.toISOString(), to: new Date(now.getTime() + SEVEN_DAYS_MS).toISOString() }
+  }, [])
 
-  const { data: upcomingPage, isLoading: upcomingLoading } = useInstructorClasses({
-    from: now.toISOString(),
-    to: sevenDaysFromNow.toISOString(),
-  })
+  const { data: upcomingPage, isLoading: upcomingLoading } = useInstructorClasses({ from, to })
 
   const { data: classesPage, isLoading: classesLoading } = useInstructorClasses({
     page: allClassesPage,
@@ -62,7 +61,7 @@ export default function InstructorDashboard() {
   if (upcomingLoading || classesLoading) {
     return (
       <main className="container mx-auto px-4 py-8 max-w-3xl" data-testid="loading-skeleton">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold">Schedule &amp; Classes</h1>
         <div className="mt-6 flex flex-col gap-3">
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-20 w-full" />
@@ -74,7 +73,10 @@ export default function InstructorDashboard() {
 
   return (
     <main className="container mx-auto px-4 py-8 max-w-3xl">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <h1 className="text-2xl font-bold">Schedule &amp; Classes</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Your upcoming classes this week and a full view of all your assigned classes.
+      </p>
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Upcoming This Week</h2>

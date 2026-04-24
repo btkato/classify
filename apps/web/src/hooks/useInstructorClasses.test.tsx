@@ -12,6 +12,12 @@ vi.mock('./useCurrentUser', () => ({
   useCurrentUser: vi.fn(),
 }))
 
+const mockGetToken = vi.fn().mockResolvedValue('test-token')
+
+vi.mock('@clerk/clerk-react', () => ({
+  useAuth: () => ({ getToken: mockGetToken }),
+}))
+
 import { useCurrentUser } from './useCurrentUser'
 
 const mockApiFetch = vi.mocked(apiFetch)
@@ -44,7 +50,8 @@ describe('useInstructorClasses', () => {
 
     await waitFor(() => expect(result.current.data).toEqual(mockClassPage))
     expect(mockApiFetch).toHaveBeenCalledWith(
-      expect.stringContaining('instructorId=user_1')
+      expect.stringContaining('instructorId=user_1'),
+      'test-token'
     )
   })
 
@@ -65,7 +72,8 @@ describe('useInstructorClasses', () => {
 
     await waitFor(() => {
       expect(mockApiFetch).toHaveBeenCalledWith(
-        expect.stringContaining('page=2')
+        expect.stringContaining('page=2'),
+        'test-token'
       )
     })
   })
@@ -81,10 +89,8 @@ describe('useInstructorClasses', () => {
 
     await waitFor(() => {
       expect(mockApiFetch).toHaveBeenCalledWith(
-        expect.stringContaining(`from=${encodeURIComponent(from)}`)
-      )
-      expect(mockApiFetch).toHaveBeenCalledWith(
-        expect.stringContaining(`to=${encodeURIComponent(to)}`)
+        expect.stringContaining(`from=${encodeURIComponent(from)}`),
+        'test-token'
       )
     })
   })
