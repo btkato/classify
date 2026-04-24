@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useClasses } from '../hooks/useClasses'
 import { useClassCategories } from '../hooks/useClassCategories'
+import { useDebounce } from '../hooks/useDebounce'
 import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card'
 import type { Class } from '../lib/types'
 
@@ -37,12 +39,23 @@ function ClassCard({ cls }: { cls: Class }) {
 export default function ClassListPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
 
   const { data: categories } = useClassCategories()
-  const { data: classPage, isLoading } = useClasses({ categoryId: selectedCategoryId, page })
+  const { data: classPage, isLoading } = useClasses({
+    categoryId: selectedCategoryId,
+    page,
+    search: debouncedSearch || undefined,
+  })
 
   function handleCategoryChange(categoryId: string | undefined) {
     setSelectedCategoryId(categoryId)
+    setPage(1)
+  }
+
+  function handleSearchChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setSearch(event.target.value)
     setPage(1)
   }
 
@@ -57,6 +70,13 @@ export default function ClassListPage() {
   return (
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold">Classes</h1>
+
+      <Input
+        className="mt-4 max-w-sm"
+        placeholder="Search classes..."
+        value={search}
+        onChange={handleSearchChange}
+      />
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button
