@@ -13,6 +13,10 @@ vi.mock('../hooks/useUpdateMembership', () => ({
   useUpdateMembership: vi.fn(),
 }))
 
+vi.mock('../hooks/useDebounce', () => ({
+  useDebounce: (value: string) => value,
+}))
+
 import { useAdminMemberships } from '../hooks/useAdminMemberships'
 import { useUpdateMembership } from '../hooks/useUpdateMembership'
 
@@ -149,6 +153,12 @@ describe('AdminMembershipPage', () => {
     renderPage()
     await userEvent.click(screen.getByRole('button', { name: 'Active' }))
     expect(mockUseAdminMemberships).toHaveBeenCalledWith(expect.objectContaining({ status: 'ACTIVE' }))
+  })
+
+  it('passes the search term to useAdminMemberships', async () => {
+    renderPage()
+    await userEvent.type(screen.getByPlaceholderText('Search by name or email…'), 'alice')
+    expect(mockUseAdminMemberships).toHaveBeenCalledWith(expect.objectContaining({ search: 'alice' }))
   })
 
   it('shows pagination when there are multiple pages', () => {
