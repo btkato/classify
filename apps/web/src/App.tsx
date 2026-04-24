@@ -6,6 +6,17 @@ import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import RoleProtectedRoute from './components/RoleProtectedRoute'
 
+function NotFoundPage() {
+  return (
+    <main className="flex min-h-[60vh] flex-col items-center justify-center text-center px-4">
+      <h1 className="text-2xl font-semibold">Page not found</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        The page you're looking for doesn't exist.
+      </p>
+    </main>
+  )
+}
+
 const ClassListPage = lazy(() => import('./pages/ClassListPage'))
 const ClassDetailPage = lazy(() => import('./pages/ClassDetailPage'))
 const StudentDashboard = lazy(() => import('./pages/StudentDashboard'))
@@ -232,7 +243,7 @@ export default function App() {
             }
           />
 
-          <Route path="*" element={<p className="text-muted-foreground">404 — Page not found</p>} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
   )
