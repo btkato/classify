@@ -66,6 +66,11 @@ enum EnrollmentType {
   DROP_IN
 }
 
+enum ThreadType {
+  DIRECT
+  ANNOUNCEMENT
+}
+
 model User {
   id          String    @id @default(uuid())
   email       String    @unique
@@ -76,14 +81,16 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  roles             UserRole[]
-  instructorProfile InstructorProfile?
-  memberships       Membership[]
-  registrations     Registration[]
-  taughtClasses     Class[]            @relation("InstructorClasses")
-  lessonSets        LessonSet[]
-  announcements     Announcement[]     @relation("InstructorAnnouncements")
-  notificationJobs  NotificationJob[]
+  roles                UserRole[]
+  instructorProfile    InstructorProfile?
+  memberships          Membership[]
+  registrations        Registration[]
+  taughtClasses        Class[]              @relation("InstructorClasses")
+  lessonSets           LessonSet[]
+  announcements        Announcement[]       @relation("InstructorAnnouncements")
+  notificationJobs     NotificationJob[]
+  threadParticipations ThreadParticipant[]
+  sentMessages         Message[]
 }
 
 model UserRole {
@@ -207,6 +214,7 @@ model Class {
   lessonSet     LessonSet?     @relation(fields: [lessonSetId], references: [id])
   registrations Registration[]
   announcements Announcement[]
+  threads       MessageThread[]
 
   @@unique([lessonSetId, sessionNumber])
   @@index([instructorId])
@@ -288,7 +296,55 @@ model NotificationTrigger {
   updatedAt       DateTime     @updatedAt
 
   notificationJobs NotificationJob[]
+  messages         Message[]
 
   @@index([triggerEvent])
   @@index([isActive])
+}
+
+model MessageThread {
+  id        String     @id @default(uuid())
+  type      ThreadType
+  classId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  class        Class?              @relation(fields: [classId], references: [id])
+  participants ThreadParticipant[]
+  messages     Message[]
+
+  @@index([type])
+  @@index([classId])
+}
+
+model ThreadParticipant {
+  id       String  @id @default(uuid())
+  threadId String
+  userId   String
+  canReply Boolean @default(true)
+
+  thread MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user   User          @relation(fields: [userId], references: [id])
+
+  @@unique([threadId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id        String    @id @default(uuid())
+  threadId  String
+  senderId  String
+  body      String
+  triggerId String?
+  readAt    DateTime?
+  sentAt    DateTime  @default(now())
+
+  thread  MessageThread        @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender  User                 @relation(fields: [senderId], references: [id])
+  trigger NotificationTrigger? @relation(fields: [triggerId], references: [id], onDelete: SetNull)
+
+  @@index([threadId])
+  @@index([senderId])
+  @@index([threadId, sentAt])
 }
