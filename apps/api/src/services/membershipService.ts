@@ -201,6 +201,7 @@ interface ListAllMembershipsInput {
   page: number
   pageSize: number
   status?: MembershipStatus
+  search?: string
 }
 
 type MembershipWithUser = Prisma.MembershipGetPayload<{
@@ -216,7 +217,18 @@ export interface MembershipPage {
 
 export async function listAllMemberships(input: ListAllMembershipsInput): Promise<MembershipPage> {
   const skip = (input.page - 1) * input.pageSize
-  const where = input.status ? { status: input.status } : {}
+  const where: Prisma.MembershipWhereInput = {
+    ...(input.status && { status: input.status }),
+    ...(input.search && {
+      user: {
+        OR: [
+          { firstName: { contains: input.search, mode: 'insensitive' } },
+          { lastName: { contains: input.search, mode: 'insensitive' } },
+          { email: { contains: input.search, mode: 'insensitive' } },
+        ],
+      },
+    }),
+  }
 
   const [data, total] = await Promise.all([
     prisma.membership.findMany({
