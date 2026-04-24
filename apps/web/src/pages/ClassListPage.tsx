@@ -39,7 +39,7 @@ export default function ClassListPage() {
   const [page, setPage] = useState(1)
 
   const { data: categories } = useClassCategories()
-  const { data: classPage, isLoading } = useClasses(selectedCategoryId, page)
+  const { data: classPage, isLoading } = useClasses({ categoryId: selectedCategoryId, page })
 
   function handleCategoryChange(categoryId: string | undefined) {
     setSelectedCategoryId(categoryId)
