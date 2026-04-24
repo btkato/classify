@@ -18,7 +18,8 @@ const listClassesQuerySchema = z
     to: z.coerce.date().optional(),
     page: z.coerce.number().int().min(1).optional(),
     pageSize: z.coerce.number().int().min(1).optional(),
-    standalone: z.coerce.boolean().optional(),
+    standalone: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
+    skipDefaults: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
     search: z.string().min(1).optional(),
   })
   .refine((query) => !query.from || !query.to || query.from <= query.to, {
@@ -53,13 +54,16 @@ classesRouter.get(
     const query = listClassesQuerySchema.parse(req.query)
 
     const { userId } = getAuth(req)
-    const needsAuth = !!query.instructorId || (query.status !== undefined && query.status !== 'ACTIVE')
+    const needsAuth =
+      !!query.instructorId ||
+      (query.status !== undefined && query.status !== 'ACTIVE') ||
+      !!query.skipDefaults
     if (needsAuth && !userId) {
       res.status(401).json({ error: { message: 'Unauthorized' } })
       return
     }
 
-    const isPublicCatalog = !query.instructorId && query.status === undefined
+    const isPublicCatalog = !query.instructorId && query.status === undefined && !query.skipDefaults
     const result = await listClasses({
       categoryId: query.categoryId,
       instructorId: query.instructorId,

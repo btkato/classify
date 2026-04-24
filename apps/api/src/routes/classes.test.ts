@@ -318,6 +318,34 @@ describe('GET /classes', () => {
     )
   })
 
+  it('passes standalone=false as boolean false to the service', async () => {
+    mockListClasses.mockResolvedValue(emptyPageResult as never)
+
+    await request(app).get('/classes?standalone=false')
+
+    expect(mockListClasses).toHaveBeenCalledWith(
+      expect.objectContaining({ standalone: false })
+    )
+  })
+
+  it('returns 401 when skipDefaults is used without authentication', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+
+    const res = await request(app).get('/classes?skipDefaults=true')
+
+    expect(res.status).toBe(401)
+  })
+
+  it('passes no status or from defaults to the service when skipDefaults is true', async () => {
+    mockListClasses.mockResolvedValue(emptyPageResult as never)
+
+    await request(app).get('/classes?skipDefaults=true')
+
+    expect(mockListClasses).toHaveBeenCalledWith(
+      expect.objectContaining({ status: undefined, from: undefined })
+    )
+  })
+
   it('returns 400 when from is after to', async () => {
     const from = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString()
     const to = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()

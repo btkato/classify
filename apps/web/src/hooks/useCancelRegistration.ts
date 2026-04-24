@@ -18,9 +18,10 @@ export function useCancelRegistration() {
         method: 'DELETE',
       })
     },
-    onSuccess: () => {
+    onSuccess: (_data, { classId }) => {
       void queryClient.invalidateQueries({ queryKey: ['my-registrations'] })
       void queryClient.invalidateQueries({ queryKey: ['classes'] })
+      void queryClient.invalidateQueries({ queryKey: ['classes', classId] })
     },
   })
 }
