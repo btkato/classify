@@ -26,6 +26,7 @@ const createLessonSetBodySchema = z.object({
   firstSessionStartsAt: z.coerce.date(),
   intervalDays: z.number().int().min(1),
   location: z.string().min(1).optional(),
+  status: z.nativeEnum(ClassStatus).optional(),
   sessionOverrides: z
     .array(
       z.object({
@@ -75,7 +76,10 @@ lessonSetsRouter.post(
       return
     }
 
-    const lessonSet = await createLessonSet({ ...body, instructorId: body.instructorId ?? userId })
+    const lessonSet = await createLessonSet({
+      ...body,
+      instructorId: body.instructorId ?? userId,
+    })
     res.status(201).json(lessonSet)
   })
 )
