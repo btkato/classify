@@ -82,6 +82,9 @@ export default function InstructorClassListPage() {
       </Link>
 
       <h1 className="mt-6 text-2xl font-bold">My Classes</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        All classes assigned to you. Click a class to update its details or view the roster.
+      </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {STATUS_FILTERS.map((filter) => (
