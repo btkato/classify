@@ -7,6 +7,7 @@ import { useMembershipHistory } from '../hooks/useMembershipHistory'
 import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { Skeleton } from '../components/ui/skeleton'
 import { apiFetch } from '../lib/api'
 import type { Membership } from '../lib/types'
 
@@ -70,14 +71,6 @@ export default function MembershipsPage() {
     },
   })
 
-  if (memsLoading || historyLoading) {
-    return (
-      <main className="container mx-auto px-4 py-8">
-        <p>Loading...</p>
-      </main>
-    )
-  }
-
   const activeMemberships = (memberships ?? []).filter((m) => m.status === 'ACTIVE')
 
   const historyData = history?.data ?? []
@@ -100,7 +93,12 @@ export default function MembershipsPage() {
           Active
         </h2>
 
-        {activeMemberships.length === 0 ? (
+        {memsLoading ? (
+          <div data-testid="loading-skeleton" className="flex flex-col gap-3">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        ) : activeMemberships.length === 0 ? (
           <div>
             <p className="text-sm text-muted-foreground">No active memberships.</p>
             <Button asChild className="mt-3">
@@ -191,7 +189,13 @@ export default function MembershipsPage() {
           )}
         </div>
 
-        {historyData.length === 0 ? (
+        {historyLoading ? (
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : historyData.length === 0 ? (
           <p className="text-sm text-muted-foreground">No purchase history.</p>
         ) : (
           <>

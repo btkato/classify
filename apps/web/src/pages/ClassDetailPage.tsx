@@ -7,6 +7,7 @@ import { useCancelRegistration } from '../hooks/useCancelRegistration'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
+import { Skeleton } from '../components/ui/skeleton'
 import type { Class } from '../lib/types'
 
 export default function ClassDetailPage() {
@@ -22,7 +23,15 @@ export default function ClassDetailPage() {
   if (isLoading) {
     return (
       <main className="container mx-auto px-4 py-8">
-        <p>Loading...</p>
+        <Link to="/classes" className="mb-6 inline-block text-sm text-muted-foreground hover:text-foreground">
+          ← Back to Classes
+        </Link>
+        <div data-testid="loading-skeleton" className="mx-auto max-w-2xl mt-6 space-y-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="mt-4 h-32 w-full" />
+        </div>
       </main>
     )
   }

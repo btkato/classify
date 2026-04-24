@@ -4,6 +4,7 @@ import { useMemberships } from '../hooks/useMemberships'
 import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { Skeleton } from '../components/ui/skeleton'
 import type { Membership, RegistrationWithClass } from '../lib/types'
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
@@ -49,14 +50,6 @@ export default function StudentDashboard() {
   const { data: registrations, isLoading: regsLoading } = useMyRegistrations()
   const { data: memberships, isLoading: memsLoading } = useMemberships()
 
-  if (regsLoading || memsLoading) {
-    return (
-      <main className="container mx-auto px-4 py-8">
-        <p>Loading...</p>
-      </main>
-    )
-  }
-
   const upcomingThisWeek = (registrations ?? []).filter(isUpcomingThisWeek)
   const activeMemberships = (memberships ?? []).filter((m) => m.status === 'ACTIVE')
 
@@ -72,7 +65,12 @@ export default function StudentDashboard() {
           </Link>
         </div>
 
-        {upcomingThisWeek.length === 0 ? (
+        {regsLoading ? (
+          <div data-testid="loading-skeleton" className="mt-4 flex flex-col gap-3">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        ) : upcomingThisWeek.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">
             No classes this week.{' '}
             <Link to="/classes" className="underline text-foreground">
@@ -119,7 +117,12 @@ export default function StudentDashboard() {
           </Link>
         </div>
 
-        {activeMemberships.length === 0 ? (
+        {memsLoading ? (
+          <div className="mt-4 flex flex-col gap-3">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        ) : activeMemberships.length === 0 ? (
           <div className="mt-4">
             <p className="text-sm text-muted-foreground">No active memberships.</p>
             <Button asChild className="mt-3">

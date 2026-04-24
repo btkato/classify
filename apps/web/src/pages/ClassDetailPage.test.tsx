@@ -113,7 +113,7 @@ describe('ClassDetailPage', () => {
 
     renderPage()
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument()
   })
 
   it('shows not found when class data is missing', () => {

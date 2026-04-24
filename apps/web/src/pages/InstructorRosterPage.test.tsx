@@ -127,6 +127,18 @@ describe('InstructorRosterPage', () => {
     })
   })
 
+  it('shows empty state when roster contains only cancelled registrations', async () => {
+    const cancelled = { ...enrolled, status: 'CANCELLED' }
+    mockUseClass.mockReturnValue({ isLoading: false, data: mockClass } as never)
+    mockUseRoster.mockReturnValue({ isLoading: false, data: [cancelled] } as never)
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('No students enrolled yet.')).toBeInTheDocument()
+    })
+  })
+
   it('links back to the class detail page', async () => {
     mockUseClass.mockReturnValue({ isLoading: false, data: mockClass } as never)
     mockUseRoster.mockReturnValue({ isLoading: false, data: [enrolled] } as never)

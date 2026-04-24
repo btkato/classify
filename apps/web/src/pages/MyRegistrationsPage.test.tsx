@@ -115,10 +115,10 @@ describe('MyRegistrationsPage', () => {
     vi.clearAllMocks()
   })
 
-  it('shows a loading state while data is fetching', () => {
+  it('shows a loading skeleton while data is fetching', () => {
     mockApiFetch.mockReturnValue(new Promise(() => {}))
     renderPage()
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument()
   })
 
   it('shows upcoming registrations by default', async () => {
@@ -169,7 +169,21 @@ describe('MyRegistrationsPage', () => {
     expect(screen.getByText(/no past registrations/i)).toBeInTheDocument()
   })
 
-  it('filters registrations by search term', async () => {
+  it('filters registrations by search term when Search is clicked', async () => {
+    mockApiFetch.mockResolvedValueOnce([enrolledReg, waitlistedReg])
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('Morning Yoga')).toBeInTheDocument())
+
+    await userEvent.type(screen.getByPlaceholderText(/search by class name/i), 'yoga')
+    await userEvent.click(screen.getByRole('button', { name: 'Search' }))
+
+    expect(screen.getByText('Morning Yoga')).toBeInTheDocument()
+    expect(screen.queryByText('HIIT Bootcamp')).not.toBeInTheDocument()
+  })
+
+  it('does not filter before Search button is clicked', async () => {
     mockApiFetch.mockResolvedValueOnce([enrolledReg, waitlistedReg])
 
     renderPage()
@@ -179,7 +193,54 @@ describe('MyRegistrationsPage', () => {
     await userEvent.type(screen.getByPlaceholderText(/search by class name/i), 'yoga')
 
     expect(screen.getByText('Morning Yoga')).toBeInTheDocument()
+    expect(screen.getByText('HIIT Bootcamp')).toBeInTheDocument()
+  })
+
+  it('opens the filter drawer when Filters button is clicked', async () => {
+    mockApiFetch.mockResolvedValueOnce([enrolledReg, waitlistedReg])
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('Morning Yoga')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: /filters/i }))
+
+    expect(await screen.findByText('Status')).toBeInTheDocument()
+    expect(screen.getByText('Class Date')).toBeInTheDocument()
+  })
+
+  it('hides registrations of unchecked status when filter is applied', async () => {
+    mockApiFetch.mockResolvedValueOnce([enrolledReg, waitlistedReg])
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('HIIT Bootcamp')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: /filters/i }))
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Waitlisted' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+
+    expect(screen.getByText('Morning Yoga')).toBeInTheDocument()
     expect(screen.queryByText('HIIT Bootcamp')).not.toBeInTheDocument()
+  })
+
+  it('restores all registrations when Clear all is clicked', async () => {
+    mockApiFetch.mockResolvedValueOnce([enrolledReg, waitlistedReg])
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('HIIT Bootcamp')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: /filters/i }))
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Waitlisted' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+
+    expect(screen.queryByText('HIIT Bootcamp')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /filters/i }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Clear all' }))
+
+    expect(screen.getByText('HIIT Bootcamp')).toBeInTheDocument()
   })
 
   it('shows cancel button for upcoming enrolled and waitlisted registrations', async () => {

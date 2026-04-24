@@ -52,7 +52,7 @@ export default function InstructorRosterPage() {
 
       <h1 className="mt-6 text-2xl font-bold">{classDetail?.title}</h1>
 
-      {roster?.length === 0 ? (
+      {enrolled.length === 0 && waitlisted.length === 0 ? (
         <p className="mt-6 text-sm text-muted-foreground">No students enrolled yet.</p>
       ) : (
         <>

@@ -69,10 +69,16 @@ describe('ClassListPage', () => {
     vi.clearAllMocks()
   })
 
-  it('shows a loading state while data is fetching', () => {
+  it('shows a loading skeleton while data is fetching', () => {
     mockApiFetch.mockReturnValue(new Promise(() => {}))
     renderPage()
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument()
+  })
+
+  it('keeps the search bar and category pills visible while loading', () => {
+    mockApiFetch.mockReturnValue(new Promise(() => {}))
+    renderPage()
+    expect(screen.getByPlaceholderText('Search classes...')).toBeInTheDocument()
   })
 
   it('renders category filter buttons once categories load', async () => {
@@ -121,6 +127,42 @@ describe('ClassListPage', () => {
         expect.stringContaining('categoryId=cat_1')
       )
     })
+  })
+
+  it('calls the API with search param when Search button is clicked', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce(mockCategories)
+      .mockResolvedValueOnce(mockClassPage(mockClasses))
+      .mockResolvedValueOnce(mockClassPage([mockClasses[0]!]))
+
+    renderPage()
+
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText('Search classes...')).toBeInTheDocument()
+    )
+
+    await userEvent.type(screen.getByPlaceholderText('Search classes...'), 'yoga')
+    await userEvent.click(screen.getByRole('button', { name: 'Search' }))
+
+    await waitFor(() => {
+      expect(mockApiFetch).toHaveBeenCalledWith(expect.stringContaining('search=yoga'))
+    })
+  })
+
+  it('does not call the API with search before the Search button is clicked', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce(mockCategories)
+      .mockResolvedValueOnce(mockClassPage(mockClasses))
+
+    renderPage()
+
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText('Search classes...')).toBeInTheDocument()
+    )
+
+    await userEvent.type(screen.getByPlaceholderText('Search classes...'), 'yoga')
+
+    expect(mockApiFetch).not.toHaveBeenCalledWith(expect.stringContaining('search=yoga'))
   })
 
   it('shows all classes when All is clicked after a category filter', async () => {

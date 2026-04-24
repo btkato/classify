@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useClasses } from '../hooks/useClasses'
 import { useClassCategories } from '../hooks/useClassCategories'
-import { useDebounce } from '../hooks/useDebounce'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { Skeleton } from '../components/ui/skeleton'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card'
 import type { Class } from '../lib/types'
 
@@ -39,14 +39,14 @@ function ClassCard({ cls }: { cls: Class }) {
 export default function ClassListPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
-  const debouncedSearch = useDebounce(search, 300)
+  const [searchInput, setSearchInput] = useState('')
+  const [activeSearch, setActiveSearch] = useState('')
 
   const { data: categories } = useClassCategories()
-  const { data: classPage, isLoading } = useClasses({
+  const { data: classPage, isFetching } = useClasses({
     categoryId: selectedCategoryId,
     page,
-    search: debouncedSearch || undefined,
+    search: activeSearch || undefined,
   })
 
   function handleCategoryChange(categoryId: string | undefined) {
@@ -54,29 +54,35 @@ export default function ClassListPage() {
     setPage(1)
   }
 
-  function handleSearchChange(event: React.ChangeEvent<HTMLInputElement>) {
-    setSearch(event.target.value)
+  function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setActiveSearch(searchInput)
     setPage(1)
   }
 
-  if (isLoading) {
-    return (
-      <main className="container mx-auto px-4 py-8">
-        <p>Loading...</p>
-      </main>
-    )
+  function handleClearSearch() {
+    setSearchInput('')
+    setActiveSearch('')
+    setPage(1)
   }
 
   return (
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold">Classes</h1>
 
-      <Input
-        className="mt-4 max-w-sm"
-        placeholder="Search classes..."
-        value={search}
-        onChange={handleSearchChange}
-      />
+      <form onSubmit={handleSearchSubmit} className="mt-4 flex gap-2 max-w-sm">
+        <Input
+          placeholder="Search classes..."
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+        />
+        {activeSearch && (
+          <Button type="button" variant="ghost" onClick={handleClearSearch}>
+            Clear
+          </Button>
+        )}
+        <Button type="submit">Search</Button>
+      </form>
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button
@@ -100,13 +106,26 @@ export default function ClassListPage() {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {classPage?.data.map((cls) => (
-          <ClassCard key={cls.id} cls={cls} />
-        ))}
-      </div>
+      {isFetching ? (
+        <div data-testid="loading-skeleton" className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border p-4 space-y-3">
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-4 w-1/3" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {classPage?.data.map((cls) => (
+            <ClassCard key={cls.id} cls={cls} />
+          ))}
+        </div>
+      )}
 
-      {classPage && classPage.totalPages > 1 && (
+      {!isFetching && classPage && classPage.totalPages > 1 && (
         <div className="mt-8 flex items-center justify-between text-sm text-muted-foreground">
           <span>
             Page {classPage.page} of {classPage.totalPages}
