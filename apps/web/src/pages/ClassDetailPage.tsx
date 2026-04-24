@@ -7,6 +7,7 @@ import { useCancelRegistration } from '../hooks/useCancelRegistration'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
+import type { Class } from '../lib/types'
 
 export default function ClassDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -54,7 +55,7 @@ export default function ClassDetailPage() {
     navigate('/sign-in', { state: { from: { pathname: location.pathname } } })
   }
 
-  function renderEnrollmentButton() {
+  function renderEnrollmentButton(detail: Class) {
     if (!isSignedIn) {
       return (
         <Button className="w-full" onClick={handleGuestEnroll}>
@@ -69,7 +70,7 @@ export default function ClassDetailPage() {
           variant="outline"
           className="w-full"
           onClick={() =>
-            cancelRegistration({ registrationId: existingRegistration.id, classId: classDetail.id })
+            cancelRegistration({ registrationId: existingRegistration.id, classId: detail.id })
           }
         >
           Cancel enrollment
@@ -83,7 +84,7 @@ export default function ClassDetailPage() {
           variant="outline"
           className="w-full"
           onClick={() =>
-            cancelRegistration({ registrationId: existingRegistration.id, classId: classDetail.id })
+            cancelRegistration({ registrationId: existingRegistration.id, classId: detail.id })
           }
         >
           Cancel waitlist position
@@ -136,7 +137,7 @@ export default function ClassDetailPage() {
         </div>
 
         <Card className="mt-8">
-          <CardContent className="pt-6">{renderEnrollmentButton()}</CardContent>
+          <CardContent className="pt-6">{renderEnrollmentButton(classDetail)}</CardContent>
         </Card>
       </div>
     </main>

@@ -308,6 +308,16 @@ describe('GET /classes', () => {
     )
   })
 
+  it('passes search query param to the service', async () => {
+    mockListClasses.mockResolvedValue(emptyPageResult as never)
+
+    await request(app).get('/classes?search=yoga')
+
+    expect(mockListClasses).toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'yoga' })
+    )
+  })
+
   it('returns 400 when from is after to', async () => {
     const from = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString()
     const to = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()

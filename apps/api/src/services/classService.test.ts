@@ -110,8 +110,35 @@ describe('listClasses', () => {
           status: undefined,
           startsAt: undefined,
           lessonSetId: undefined,
+          title: undefined,
         },
         orderBy: { startsAt: 'asc' },
+      })
+    )
+  })
+
+  it('filters by title contains when search is provided', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    await listClasses({ search: 'yoga' })
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          title: { contains: 'yoga', mode: 'insensitive' },
+        }),
+      })
+    )
+  })
+
+  it('does not filter by title when search is not provided', async () => {
+    mockFindMany.mockResolvedValue([])
+
+    await listClasses({})
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ title: undefined }),
       })
     )
   })

@@ -24,6 +24,7 @@ interface ListClassesInput {
   page?: number
   pageSize?: number
   standalone?: boolean
+  search?: string
 }
 
 export interface ClassPage {
@@ -56,12 +57,13 @@ export async function listClasses(input: ListClassesInput): Promise<ClassPage> {
       ? { gte: input.from, lte: input.to }
       : undefined
 
-  const where = {
+  const where: Prisma.ClassWhereInput = {
     categoryId: input.categoryId,
     instructorId: input.instructorId,
     status: input.status,
     startsAt,
     lessonSetId: input.standalone ? null : undefined,
+    title: input.search ? { contains: input.search, mode: 'insensitive' } : undefined,
   }
 
   const [data, total] = await Promise.all([
