@@ -1,6 +1,9 @@
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { useClass } from '../hooks/useClass'
+import { useMyRegistrations } from '../hooks/useMyRegistrations'
+import { useEnroll } from '../hooks/useEnroll'
+import { useCancelRegistration } from '../hooks/useCancelRegistration'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
@@ -11,6 +14,9 @@ export default function ClassDetailPage() {
   const location = useLocation()
   const { isSignedIn } = useAuth()
   const { data: classDetail, isLoading } = useClass(id ?? '')
+  const { data: registrations } = useMyRegistrations()
+  const { mutate: enroll } = useEnroll(id ?? '')
+  const { mutate: cancelRegistration } = useCancelRegistration()
 
   if (isLoading) {
     return (
@@ -28,6 +34,12 @@ export default function ClassDetailPage() {
     )
   }
 
+  const existingRegistration = (registrations ?? []).find(
+    (registration) =>
+      registration.classId === classDetail.id &&
+      (registration.status === 'ENROLLED' || registration.status === 'WAITLISTED')
+  )
+
   const isFull = classDetail.enrolledCount >= classDetail.capacity
 
   const date = new Date(classDetail.startsAt).toLocaleString(undefined, {
@@ -40,6 +52,58 @@ export default function ClassDetailPage() {
 
   function handleGuestEnroll() {
     navigate('/sign-in', { state: { from: { pathname: location.pathname } } })
+  }
+
+  function renderEnrollmentButton() {
+    if (!isSignedIn) {
+      return (
+        <Button className="w-full" onClick={handleGuestEnroll}>
+          Sign in to enroll
+        </Button>
+      )
+    }
+
+    if (existingRegistration?.status === 'ENROLLED') {
+      return (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() =>
+            cancelRegistration({ registrationId: existingRegistration.id, classId: classDetail.id })
+          }
+        >
+          Cancel enrollment
+        </Button>
+      )
+    }
+
+    if (existingRegistration?.status === 'WAITLISTED') {
+      return (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() =>
+            cancelRegistration({ registrationId: existingRegistration.id, classId: classDetail.id })
+          }
+        >
+          Cancel waitlist position
+        </Button>
+      )
+    }
+
+    if (isFull) {
+      return (
+        <Button variant="outline" className="w-full" onClick={() => enroll()}>
+          Join Waitlist
+        </Button>
+      )
+    }
+
+    return (
+      <Button className="w-full" onClick={() => enroll()}>
+        Enroll
+      </Button>
+    )
   }
 
   return (
@@ -72,17 +136,7 @@ export default function ClassDetailPage() {
         </div>
 
         <Card className="mt-8">
-          <CardContent className="pt-6">
-            {!isSignedIn ? (
-              <Button className="w-full" onClick={handleGuestEnroll}>
-                Sign in to enroll
-              </Button>
-            ) : (
-              <Button variant={isFull ? 'outline' : 'default'} className="w-full">
-                {isFull ? 'Join Waitlist' : 'Enroll'}
-              </Button>
-            )}
-          </CardContent>
+          <CardContent className="pt-6">{renderEnrollmentButton()}</CardContent>
         </Card>
       </div>
     </main>
