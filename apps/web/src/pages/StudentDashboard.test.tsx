@@ -10,7 +10,7 @@ vi.mock('../lib/api', () => ({
 }))
 
 vi.mock('@clerk/clerk-react', () => ({
-  useAuth: vi.fn().mockReturnValue({ getToken: vi.fn().mockResolvedValue('token_123') }),
+  useAuth: vi.fn().mockReturnValue({ isSignedIn: true, getToken: vi.fn().mockResolvedValue('token_123') }),
 }))
 
 const mockApiFetch = vi.mocked(apiFetch)
