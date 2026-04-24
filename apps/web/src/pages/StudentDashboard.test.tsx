@@ -114,10 +114,10 @@ describe('StudentDashboard', () => {
     vi.clearAllMocks()
   })
 
-  it('shows a loading state while data is fetching', () => {
+  it('shows a loading skeleton while data is fetching', () => {
     mockApiFetch.mockReturnValue(new Promise(() => {}))
     renderPage()
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument()
   })
 
   it('renders upcoming registrations within the next 7 days', async () => {

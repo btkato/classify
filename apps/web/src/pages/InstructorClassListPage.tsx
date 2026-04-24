@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useInstructorClasses } from '../hooks/useInstructorClasses'
-import { useDebounce } from '../hooks/useDebounce'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -51,13 +50,13 @@ function ClassCard({ classDetail }: { classDetail: Class & { enrolledCount?: num
 export default function InstructorClassListPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
-  const debouncedSearch = useDebounce(search, 300)
+  const [searchInput, setSearchInput] = useState('')
+  const [activeSearch, setActiveSearch] = useState('')
 
   const { data: classesPage, isLoading } = useInstructorClasses({
     status: selectedStatus,
     page,
-    search: debouncedSearch || undefined,
+    search: activeSearch || undefined,
   })
 
   function handleStatusChange(status: string | undefined) {
@@ -65,24 +64,16 @@ export default function InstructorClassListPage() {
     setPage(1)
   }
 
-  function handleSearchChange(event: React.ChangeEvent<HTMLInputElement>) {
-    setSearch(event.target.value)
+  function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setActiveSearch(searchInput)
     setPage(1)
   }
 
-  if (isLoading) {
-    return (
-      <main className="container mx-auto px-4 py-8 max-w-3xl" data-testid="loading-skeleton">
-        <Link to="/instructor" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Back to Dashboard
-        </Link>
-        <div className="mt-6 flex flex-col gap-3">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-        </div>
-      </main>
-    )
+  function handleClearSearch() {
+    setSearchInput('')
+    setActiveSearch('')
+    setPage(1)
   }
 
   return (
@@ -96,12 +87,19 @@ export default function InstructorClassListPage() {
         All classes assigned to you. Click a class to update its details or view the roster.
       </p>
 
-      <Input
-        className="mt-4 max-w-sm"
-        placeholder="Search classes..."
-        value={search}
-        onChange={handleSearchChange}
-      />
+      <form onSubmit={handleSearchSubmit} className="mt-4 flex gap-2 max-w-sm">
+        <Input
+          placeholder="Search classes..."
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+        />
+        {activeSearch && (
+          <Button type="button" variant="ghost" onClick={handleClearSearch}>
+            Clear
+          </Button>
+        )}
+        <Button type="submit">Search</Button>
+      </form>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {STATUS_FILTERS.map((filter) => (
@@ -117,7 +115,13 @@ export default function InstructorClassListPage() {
         ))}
       </div>
 
-      {classesPage?.data.length === 0 ? (
+      {isLoading ? (
+        <div data-testid="loading-skeleton" className="mt-6 flex flex-col gap-3">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      ) : classesPage?.data.length === 0 ? (
         <p className="mt-6 text-sm text-muted-foreground">No classes match this filter.</p>
       ) : (
         <div className="mt-6 flex flex-col gap-3">
@@ -127,7 +131,7 @@ export default function InstructorClassListPage() {
         </div>
       )}
 
-      {classesPage && classesPage.totalPages > 1 && (
+      {!isLoading && classesPage && classesPage.totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground">
           <span>Page {classesPage.page} of {classesPage.totalPages}</span>
           <div className="flex gap-2">

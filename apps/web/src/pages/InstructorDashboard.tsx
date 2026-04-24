@@ -58,19 +58,6 @@ export default function InstructorDashboard() {
   const upcomingClasses = upcomingPage?.data ?? []
   const allClasses = classesPage?.data ?? []
 
-  if (upcomingLoading || classesLoading) {
-    return (
-      <main className="container mx-auto px-4 py-8 max-w-3xl" data-testid="loading-skeleton">
-        <h1 className="text-2xl font-bold">Schedule &amp; Classes</h1>
-        <div className="mt-6 flex flex-col gap-3">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-        </div>
-      </main>
-    )
-  }
-
   return (
     <main className="container mx-auto px-4 py-8 max-w-3xl">
       <h1 className="text-2xl font-bold">Schedule &amp; Classes</h1>
@@ -81,7 +68,12 @@ export default function InstructorDashboard() {
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Upcoming This Week</h2>
 
-        {upcomingClasses.length === 0 ? (
+        {upcomingLoading ? (
+          <div data-testid="loading-skeleton" className="mt-4 flex flex-col gap-3">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        ) : upcomingClasses.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">No classes scheduled this week.</p>
         ) : (
           <div className="mt-4 flex flex-col gap-3">
@@ -103,7 +95,13 @@ export default function InstructorDashboard() {
           </Link>
         </div>
 
-        {allClasses.length === 0 ? (
+        {classesLoading ? (
+          <div className="mt-4 flex flex-col gap-3">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        ) : allClasses.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">You have no assigned classes.</p>
         ) : (
           <div className="mt-4 flex flex-col gap-3">

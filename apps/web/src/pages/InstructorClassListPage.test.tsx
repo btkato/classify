@@ -131,6 +131,39 @@ describe('InstructorClassListPage', () => {
     })
   })
 
+  it('passes search to the hook when Search button is clicked', async () => {
+    mockUseInstructorClasses.mockReturnValue({ isLoading: false, data: allPage } as never)
+
+    renderPage()
+
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText('Search classes...')).toBeInTheDocument()
+    )
+
+    await userEvent.type(screen.getByPlaceholderText('Search classes...'), 'yoga')
+    await userEvent.click(screen.getByRole('button', { name: 'Search' }))
+
+    expect(mockUseInstructorClasses).toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'yoga' })
+    )
+  })
+
+  it('does not pass search to the hook before the Search button is clicked', async () => {
+    mockUseInstructorClasses.mockReturnValue({ isLoading: false, data: allPage } as never)
+
+    renderPage()
+
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText('Search classes...')).toBeInTheDocument()
+    )
+
+    await userEvent.type(screen.getByPlaceholderText('Search classes...'), 'yoga')
+
+    expect(mockUseInstructorClasses).not.toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'yoga' })
+    )
+  })
+
   it('navigates to class detail when a card is clicked', async () => {
     mockUseInstructorClasses.mockReturnValue({ isLoading: false, data: allPage } as never)
 

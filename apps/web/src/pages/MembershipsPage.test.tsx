@@ -83,10 +83,10 @@ describe('MembershipsPage', () => {
     vi.clearAllMocks()
   })
 
-  it('shows a loading state while data is fetching', () => {
+  it('shows a loading skeleton while data is fetching', () => {
     mockApiFetch.mockReturnValue(new Promise(() => {}))
     renderPage()
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument()
   })
 
   it('shows empty state when there are no active memberships', async () => {

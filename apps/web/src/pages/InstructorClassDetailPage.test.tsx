@@ -101,6 +101,16 @@ describe('InstructorClassDetailPage', () => {
     })
   })
 
+  it('shows a disabled View Roster button with hint when no students are enrolled', async () => {
+    mockApiFetch.mockResolvedValueOnce({ ...mockClass, enrolledCount: 0 })
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'View Roster' })).toBeDisabled()
+      expect(screen.getByText('No students are enrolled yet.')).toBeInTheDocument()
+    })
+  })
+
   it('calls PATCH /classes/:id with updated fields on save', async () => {
     mockApiFetch.mockResolvedValueOnce(mockClass)
     mockApiFetch.mockResolvedValueOnce({ ...mockClass, location: 'Studio B' })

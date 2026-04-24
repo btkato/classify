@@ -79,9 +79,16 @@ export default function InstructorClassDetailPage() {
           <span>{classDetail.enrolledCount} / {classDetail.capacity} enrolled</span>
         </div>
 
-        <Button asChild variant="outline" className="mt-4">
-          <Link to={`/instructor/classes/${classDetail.id}/roster`}>View Roster</Link>
-        </Button>
+        {classDetail.enrolledCount === 0 ? (
+          <div className="mt-4">
+            <Button variant="outline" disabled>View Roster</Button>
+            <p className="mt-1 text-sm text-muted-foreground">No students are enrolled yet.</p>
+          </div>
+        ) : (
+          <Button asChild variant="outline" className="mt-4">
+            <Link to={`/instructor/classes/${classDetail.id}/roster`}>View Roster</Link>
+          </Button>
+        )}
       </div>
 
       <hr className="my-8 border-border" />
