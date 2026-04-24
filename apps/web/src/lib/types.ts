@@ -107,6 +107,7 @@ export interface Class {
   location: string | null
   status: string
   classNumber: number
+  sessionNumber: number | null
 }
 
 export interface LessonSet {
