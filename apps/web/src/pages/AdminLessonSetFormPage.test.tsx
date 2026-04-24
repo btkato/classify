@@ -67,23 +67,23 @@ describe('AdminLessonSetFormPage', () => {
     expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute('href', '/admin/lesson-sets')
   })
 
-  it('calls mutate with form data on submit', async () => {
-    renderPage()
-
+  async function fillRequiredFields() {
     await userEvent.type(screen.getByLabelText('Title'), 'Morning Yoga Series')
     await userEvent.type(screen.getByLabelText('Total Sessions'), '6')
     await userEvent.type(screen.getByLabelText('Capacity'), '15')
     await userEvent.type(screen.getByLabelText('Duration (min)'), '60')
     await userEvent.type(screen.getByLabelText('First Session Date & Time'), '2025-06-01T09:00')
     await userEvent.type(screen.getByLabelText('Interval (days)'), '7')
-
     await userEvent.click(screen.getByLabelText('Category'))
     await userEvent.click(await screen.findByRole('option', { name: 'Yoga' }))
-
     await userEvent.click(screen.getByLabelText('Enrollment Type'))
     await userEvent.click(await screen.findByRole('option', { name: 'Full Set' }))
+  }
 
-    await userEvent.click(screen.getByRole('button', { name: 'Create lesson set' }))
+  it('calls mutate with status ACTIVE when Publish is clicked', async () => {
+    renderPage()
+    await fillRequiredFields()
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
 
     await waitFor(() =>
       expect(mockMutate).toHaveBeenCalledWith(
@@ -95,7 +95,21 @@ describe('AdminLessonSetFormPage', () => {
           durationMinutes: 60,
           intervalDays: 7,
           enrollmentType: 'FULL_SET',
+          status: 'ACTIVE',
         }),
+        expect.objectContaining({ onSuccess: expect.any(Function) })
+      )
+    )
+  })
+
+  it('calls mutate with status DRAFT when Save as draft is clicked', async () => {
+    renderPage()
+    await fillRequiredFields()
+    await userEvent.click(screen.getByRole('button', { name: 'Save as draft' }))
+
+    await waitFor(() =>
+      expect(mockMutate).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'DRAFT' }),
         expect.objectContaining({ onSuccess: expect.any(Function) })
       )
     )
@@ -108,21 +122,8 @@ describe('AdminLessonSetFormPage', () => {
     } as never)
 
     renderPage()
-
-    await userEvent.type(screen.getByLabelText('Title'), 'Morning Yoga Series')
-    await userEvent.type(screen.getByLabelText('Total Sessions'), '6')
-    await userEvent.type(screen.getByLabelText('Capacity'), '15')
-    await userEvent.type(screen.getByLabelText('Duration (min)'), '60')
-    await userEvent.type(screen.getByLabelText('First Session Date & Time'), '2025-06-01T09:00')
-    await userEvent.type(screen.getByLabelText('Interval (days)'), '7')
-
-    await userEvent.click(screen.getByLabelText('Category'))
-    await userEvent.click(await screen.findByRole('option', { name: 'Yoga' }))
-
-    await userEvent.click(screen.getByLabelText('Enrollment Type'))
-    await userEvent.click(await screen.findByRole('option', { name: 'Full Set' }))
-
-    await userEvent.click(screen.getByRole('button', { name: 'Create lesson set' }))
+    await fillRequiredFields()
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
 
     await waitFor(() => expect(screen.getByText('Lesson Sets List')).toBeInTheDocument())
   })

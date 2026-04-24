@@ -53,8 +53,7 @@ export default function AdminLessonSetFormPage() {
   const { data: instructors } = useInstructors(debouncedSearch || undefined)
   const selectedInstructor = instructors?.find((instructor) => instructor.id === instructorId)
 
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
+  function handleCreate(status: 'DRAFT' | 'ACTIVE') {
     createLessonSet.mutate(
       {
         title,
@@ -68,6 +67,7 @@ export default function AdminLessonSetFormPage() {
         intervalDays: Number(intervalDays),
         location: location || undefined,
         instructorId,
+        status,
       },
       { onSuccess: () => navigate('/admin/lesson-sets') }
     )
@@ -81,7 +81,7 @@ export default function AdminLessonSetFormPage() {
 
       <h1 className="mt-6 text-2xl font-bold">New Lesson Set</h1>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+      <form className="mt-6 space-y-5">
         <div className="space-y-1.5">
           <Label htmlFor="title">Title</Label>
           <Input
@@ -271,8 +271,20 @@ export default function AdminLessonSetFormPage() {
           <Button asChild variant="outline">
             <Link to="/admin/lesson-sets">Cancel</Link>
           </Button>
-          <Button type="submit" disabled={createLessonSet.isPending}>
-            Create lesson set
+          <Button
+            type="button"
+            variant="outline"
+            disabled={createLessonSet.isPending}
+            onClick={() => handleCreate('DRAFT')}
+          >
+            Save as draft
+          </Button>
+          <Button
+            type="button"
+            disabled={createLessonSet.isPending}
+            onClick={() => handleCreate('ACTIVE')}
+          >
+            Publish
           </Button>
         </div>
       </form>

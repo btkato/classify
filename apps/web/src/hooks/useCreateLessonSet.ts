@@ -15,6 +15,7 @@ interface CreateLessonSetInput {
   intervalDays: number
   location?: string
   instructorId?: string
+  status: string
 }
 
 export function useCreateLessonSet() {
