@@ -78,6 +78,20 @@ describe('useInstructorClasses', () => {
     })
   })
 
+  it('passes search param to the API when provided', async () => {
+    mockUseCurrentUser.mockReturnValue({ isLoading: false, data: { id: 'user_1' } } as never)
+    mockApiFetch.mockResolvedValue(mockClassPage)
+
+    renderHook(() => useInstructorClasses({ search: 'yoga' }), { wrapper })
+
+    await waitFor(() => {
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        expect.stringContaining('search=yoga'),
+        'test-token'
+      )
+    })
+  })
+
   it('passes from and to params when provided', async () => {
     mockUseCurrentUser.mockReturnValue({ isLoading: false, data: { id: 'user_1' } } as never)
     mockApiFetch.mockResolvedValue(mockClassPage)

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useInstructorClasses } from '../hooks/useInstructorClasses'
+import { useDebounce } from '../hooks/useDebounce'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
 import type { Class } from '../lib/types'
 
@@ -49,14 +51,22 @@ function ClassCard({ classDetail }: { classDetail: Class & { enrolledCount?: num
 export default function InstructorClassListPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
 
   const { data: classesPage, isLoading } = useInstructorClasses({
     status: selectedStatus,
     page,
+    search: debouncedSearch || undefined,
   })
 
   function handleStatusChange(status: string | undefined) {
     setSelectedStatus(status)
+    setPage(1)
+  }
+
+  function handleSearchChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setSearch(event.target.value)
     setPage(1)
   }
 
@@ -85,6 +95,13 @@ export default function InstructorClassListPage() {
       <p className="mt-1 text-sm text-muted-foreground">
         All classes assigned to you. Click a class to update its details or view the roster.
       </p>
+
+      <Input
+        className="mt-4 max-w-sm"
+        placeholder="Search classes..."
+        value={search}
+        onChange={handleSearchChange}
+      />
 
       <div className="mt-4 flex flex-wrap gap-2">
         {STATUS_FILTERS.map((filter) => (

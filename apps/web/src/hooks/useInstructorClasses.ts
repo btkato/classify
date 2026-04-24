@@ -9,9 +9,10 @@ interface UseInstructorClassesOptions {
   from?: string
   to?: string
   status?: string
+  search?: string
 }
 
-export function useInstructorClasses({ page = 1, from, to, status }: UseInstructorClassesOptions = {}) {
+export function useInstructorClasses({ page = 1, from, to, status, search }: UseInstructorClassesOptions = {}) {
   const { getToken } = useAuth()
   const { data: currentUser, isLoading } = useCurrentUser()
 
@@ -21,9 +22,10 @@ export function useInstructorClasses({ page = 1, from, to, status }: UseInstruct
   if (from) params.set('from', from)
   if (to) params.set('to', to)
   if (status) params.set('status', status)
+  if (search) params.set('search', search)
 
   return useQuery({
-    queryKey: ['instructor-classes', { instructorId: currentUser?.id, page, from, to, status }],
+    queryKey: ['instructor-classes', { instructorId: currentUser?.id, page, from, to, status, search }],
     enabled: !isLoading && !!currentUser?.id,
     queryFn: async () => {
       const token = await getToken()
