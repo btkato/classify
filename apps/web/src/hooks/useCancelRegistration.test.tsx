@@ -60,5 +60,6 @@ describe('useCancelRegistration', () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['my-registrations'] })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['classes'] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['classes', 'cls_1'] })
   })
 })

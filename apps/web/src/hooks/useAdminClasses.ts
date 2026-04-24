@@ -18,12 +18,13 @@ export function useAdminClasses(params: UseAdminClassesParams = {}) {
   const queryParams = new URLSearchParams()
   queryParams.set('page', String(page))
   queryParams.set('pageSize', String(pageSize))
+  queryParams.set('skipDefaults', 'true')
   if (status) queryParams.set('status', status)
   if (categoryId) queryParams.set('categoryId', categoryId)
   if (standalone) queryParams.set('standalone', 'true')
 
   return useQuery({
-    queryKey: ['admin-classes', { status, categoryId, page, pageSize, standalone }],
+    queryKey: ['admin-classes', { status, categoryId, page, pageSize, standalone, skipDefaults: true }],
     queryFn: async () => {
       const token = await getToken()
       return apiFetch<ClassPage>(`/classes?${queryParams.toString()}`, token ?? undefined)

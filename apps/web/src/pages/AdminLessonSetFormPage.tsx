@@ -53,6 +53,11 @@ export default function AdminLessonSetFormPage() {
   const { data: instructors } = useInstructors(debouncedSearch || undefined)
   const selectedInstructor = instructors?.find((instructor) => instructor.id === instructorId)
 
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    handleCreate('ACTIVE')
+  }
+
   function handleCreate(status: 'DRAFT' | 'ACTIVE') {
     createLessonSet.mutate(
       {
@@ -81,7 +86,7 @@ export default function AdminLessonSetFormPage() {
 
       <h1 className="mt-6 text-2xl font-bold">New Lesson Set</h1>
 
-      <form className="mt-6 space-y-5">
+      <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
         <div className="space-y-1.5">
           <Label htmlFor="title">Title</Label>
           <Input
@@ -280,9 +285,8 @@ export default function AdminLessonSetFormPage() {
             Save as draft
           </Button>
           <Button
-            type="button"
+            type="submit"
             disabled={createLessonSet.isPending}
-            onClick={() => handleCreate('ACTIVE')}
           >
             Publish
           </Button>
