@@ -54,6 +54,7 @@ const listMembershipsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).default(20),
   status: z.nativeEnum(MembershipStatus).optional(),
+  search: z.string().min(1).optional(),
 })
 
 adminRouter.get(
@@ -61,8 +62,8 @@ adminRouter.get(
   requireAuth,
   requireRoles(['ADMIN']),
   asyncHandler(async (req, res) => {
-    const { page, pageSize, status } = listMembershipsQuerySchema.parse(req.query)
-    const result = await listAllMemberships({ page, pageSize, status })
+    const { page, pageSize, status, search } = listMembershipsQuerySchema.parse(req.query)
+    const result = await listAllMemberships({ page, pageSize, status, search })
     res.status(200).json(result)
   })
 )

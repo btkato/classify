@@ -355,6 +355,14 @@ describe('GET /admin/memberships', () => {
         expect.objectContaining({ status: 'ACTIVE' })
       )
     })
+
+    it('passes search query param to listAllMemberships', async () => {
+      await request(app).get('/admin/memberships?search=alice')
+
+      expect(mockListAllMemberships).toHaveBeenCalledWith(
+        expect.objectContaining({ search: 'alice' })
+      )
+    })
   })
 })
 
