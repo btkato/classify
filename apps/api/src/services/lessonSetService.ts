@@ -22,6 +22,7 @@ interface CreateLessonSetInput {
   intervalDays: number
   location?: string
   sessionOverrides?: SessionOverride[]
+  status?: ClassStatus
 }
 
 interface UpdateLessonSetInput {
@@ -38,6 +39,8 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24
 
 export async function createLessonSet(input: CreateLessonSetInput): Promise<LessonSet> {
   return prisma.$transaction(async (transaction) => {
+    const lessonSetStatus = input.status ?? 'ACTIVE'
+
     const lessonSet = await transaction.lessonSet.create({
       data: {
         title: input.title,
@@ -46,7 +49,7 @@ export async function createLessonSet(input: CreateLessonSetInput): Promise<Less
         totalSessions: input.totalSessions,
         instructorId: input.instructorId,
         categoryId: input.categoryId,
-        status: 'ACTIVE',
+        status: lessonSetStatus,
       },
     })
 
@@ -72,7 +75,7 @@ export async function createLessonSet(input: CreateLessonSetInput): Promise<Less
           durationMinutes: input.durationMinutes,
           startsAt: override?.startsAt ?? defaultStartsAt,
           location: override?.location ?? input.location,
-          status: 'ACTIVE',
+          status: lessonSetStatus,
         },
       })
     }

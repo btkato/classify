@@ -134,6 +134,26 @@ describe('POST /lesson-sets', () => {
       expect.objectContaining({ instructorId: 'instructor_99' })
     )
   })
+
+  it('passes status to createLessonSet when provided', async () => {
+    mockCreateLessonSet.mockResolvedValue({ ...lessonSetRecord, status: 'DRAFT' } as never)
+
+    await request(app)
+      .post('/lesson-sets')
+      .send({ ...validBody, status: 'DRAFT' })
+
+    expect(mockCreateLessonSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'DRAFT' })
+    )
+  })
+
+  it('returns 400 when status is not a valid ClassStatus', async () => {
+    const response = await request(app)
+      .post('/lesson-sets')
+      .send({ ...validBody, status: 'PENDING' })
+
+    expect(response.status).toBe(400)
+  })
 })
 
 describe('GET /lesson-sets', () => {
