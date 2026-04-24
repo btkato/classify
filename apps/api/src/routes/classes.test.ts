@@ -336,7 +336,16 @@ describe('GET /classes', () => {
     expect(res.status).toBe(401)
   })
 
+  it('returns 403 when skipDefaults is used by a non-admin', async () => {
+    mockFindMany.mockResolvedValue([{ role: 'STUDENT' }] as never)
+
+    const res = await request(app).get('/classes?skipDefaults=true')
+
+    expect(res.status).toBe(403)
+  })
+
   it('passes no status or from defaults to the service when skipDefaults is true', async () => {
+    mockFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
     mockListClasses.mockResolvedValue(emptyPageResult as never)
 
     await request(app).get('/classes?skipDefaults=true')

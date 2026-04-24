@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/requireAuth.js'
 import { requireRoles } from '../middleware/requireRoles.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import { createClass, listClasses, getClass, updateClass, cancelClass, getRoster } from '../services/classService.js'
+import { prisma } from '../lib/prisma.js'
 
 export const classesRouter = express.Router()
 
@@ -61,6 +62,17 @@ classesRouter.get(
     if (needsAuth && !userId) {
       res.status(401).json({ error: { message: 'Unauthorized' } })
       return
+    }
+
+    if (query.skipDefaults) {
+      const userRoles = await prisma.userRole.findMany({
+        where: { userId: userId as string },
+        select: { role: true },
+      })
+      if (!userRoles.some((r) => r.role === 'ADMIN')) {
+        res.status(403).json({ error: { message: 'Forbidden' } })
+        return
+      }
     }
 
     const isPublicCatalog = !query.instructorId && query.status === undefined && !query.skipDefaults
