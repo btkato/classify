@@ -273,6 +273,26 @@ async function seedLessonSets(categoryMap: Map<string, string>) {
   console.log(`  Lesson Set: ${lessonSet2.title} (4 sessions)`)
 }
 
+async function seedMembershipPlans() {
+  const plans = [
+    { type: 'DROP_IN' as const, displayName: 'Drop-in', description: 'Single class access. No expiry.', priceInCents: 2000 },
+    { type: 'CLASS_PACK_5' as const, displayName: 'Class Pack (5)', description: '5 classes. No expiry. $17 per class.', priceInCents: 8500 },
+    { type: 'CLASS_PACK_10' as const, displayName: 'Class Pack (10)', description: '10 classes. No expiry. $16 per class.', priceInCents: 16000 },
+    { type: 'MONTHLY' as const, displayName: 'Monthly', description: 'Unlimited classes. 30 days access.', priceInCents: 12000 },
+    { type: 'CONTINUOUS_MONTHLY' as const, displayName: 'Continuous Monthly', description: 'Unlimited classes. Auto-renews monthly. Cancel anytime.', priceInCents: 11000 },
+    { type: 'YEARLY' as const, displayName: 'Yearly', description: 'Unlimited classes. 365 days. ~$92 per month.', priceInCents: 110000 },
+  ]
+
+  for (const plan of plans) {
+    await prisma.membershipPlan.upsert({
+      where: { type: plan.type },
+      create: plan,
+      update: { displayName: plan.displayName, description: plan.description, priceInCents: plan.priceInCents },
+    })
+    console.log(`  Plan: ${plan.displayName} — $${(plan.priceInCents / 100).toFixed(0)}`)
+  }
+}
+
 async function seedMemberships() {
   const now = new Date()
 
@@ -685,6 +705,9 @@ async function main() {
 
   console.log('\nLesson Sets:')
   await seedLessonSets(categoryMap)
+
+  console.log('\nMembership Plans:')
+  await seedMembershipPlans()
 
   console.log('\nMemberships:')
   await seedMemberships()
