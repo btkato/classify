@@ -11,6 +11,7 @@ import { membershipsRouter } from './routes/memberships.js'
 import { registrationsRouter } from './routes/registrations.js'
 import { lessonSetsRouter } from './routes/lessonSets.js'
 import { announcementsRouter } from './routes/announcements.js'
+import { messagesRouter } from './routes/messages.js'
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [
   'http://localhost:5173',
@@ -38,5 +39,6 @@ app.use('/memberships', membershipsRouter)
 app.use('/registrations', registrationsRouter)
 app.use('/lesson-sets', lessonSetsRouter)
 app.use('/announcements', announcementsRouter)
+app.use('/messages', messagesRouter)
 
 app.use(errorHandler)
