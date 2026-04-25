@@ -38,6 +38,9 @@ const AdminClassEditPage = lazy(() => import('./pages/AdminClassEditPage'))
 const AdminLessonSetListPage = lazy(() => import('./pages/AdminLessonSetListPage'))
 const AdminLessonSetFormPage = lazy(() => import('./pages/AdminLessonSetFormPage'))
 const AdminLessonSetEditPage = lazy(() => import('./pages/AdminLessonSetEditPage'))
+const InboxPage = lazy(() => import('./pages/InboxPage'))
+const ThreadPage = lazy(() => import('./pages/ThreadPage'))
+const AdminComposePage = lazy(() => import('./pages/AdminComposePage'))
 
 const locationStateSchema = z.object({ from: z.object({ pathname: z.string() }) }).nullable()
 
@@ -239,6 +242,34 @@ export default function App() {
                 <RoleProtectedRoute role="ADMIN">
                   <AdminLessonSetEditPage />
                 </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* /inbox/compose must come before /inbox/:threadId — static routes first */}
+          <Route
+            path="/inbox/compose"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminComposePage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inbox/:threadId"
+            element={
+              <ProtectedRoute>
+                <ThreadPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inbox"
+            element={
+              <ProtectedRoute>
+                <InboxPage />
               </ProtectedRoute>
             }
           />
