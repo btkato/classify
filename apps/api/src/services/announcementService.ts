@@ -82,13 +82,19 @@ export async function sendAnnouncement(input: SendAnnouncementInput): Promise<Me
       return newMessage
     }
 
+    await transaction.threadParticipant.deleteMany({
+      where: { threadId: foundThread.id },
+    })
+
     await transaction.threadParticipant.createMany({
-      data: enrolledRegistrations.map((registration) => ({
-        threadId: foundThread.id,
-        userId: registration.userId,
-        canReply: false,
-      })),
-      skipDuplicates: true,
+      data: [
+        { threadId: foundThread.id, userId: input.senderId, canReply: true },
+        ...enrolledRegistrations.map((registration) => ({
+          threadId: foundThread.id,
+          userId: registration.userId,
+          canReply: false,
+        })),
+      ],
     })
 
     const newMessage = await transaction.message.create({

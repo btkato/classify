@@ -8,7 +8,7 @@ vi.mock('../lib/prisma.js', () => ({
     class: { findUnique: vi.fn() },
     messageThread: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     registration: { findMany: vi.fn() },
-    threadParticipant: { createMany: vi.fn() },
+    threadParticipant: { createMany: vi.fn(), deleteMany: vi.fn() },
     message: { create: vi.fn(), findMany: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -20,6 +20,7 @@ const mockMessageThreadCreate = vi.mocked(prisma.messageThread.create)
 const mockMessageThreadUpdate = vi.mocked(prisma.messageThread.update)
 const mockRegistrationFindMany = vi.mocked(prisma.registration.findMany)
 const mockThreadParticipantCreateMany = vi.mocked(prisma.threadParticipant.createMany)
+const mockThreadParticipantDeleteMany = vi.mocked(prisma.threadParticipant.deleteMany)
 const mockMessageCreate = vi.mocked(prisma.message.create)
 const mockMessageFindMany = vi.mocked(prisma.message.findMany)
 const mockTransaction = vi.mocked(prisma.$transaction)
@@ -76,8 +77,10 @@ describe('sendAnnouncement', () => {
     mockClassFindUnique.mockResolvedValue({ ...foundClass, instructorId: 'other_instructor' } as never)
     mockMessageThreadFindFirst.mockResolvedValue(createdThread as never)
     mockRegistrationFindMany.mockResolvedValue([] as never)
-    mockThreadParticipantCreateMany.mockResolvedValue({ count: 0 })
+    mockThreadParticipantDeleteMany.mockResolvedValue({ count: 0 })
+    mockThreadParticipantCreateMany.mockResolvedValue({ count: 1 })
     mockMessageCreate.mockResolvedValue(createdMessage as never)
+    mockMessageThreadUpdate.mockResolvedValue(createdThread as never)
 
     await expect(
       sendAnnouncement({ classId, senderId, body: 'Hello', isAdmin: true })
@@ -118,20 +121,26 @@ describe('sendAnnouncement', () => {
     expect(result).toEqual(createdMessage)
   })
 
-  it('upserts current enrolled students and adds message to existing thread', async () => {
+  it('fully syncs participants on existing thread: removes all then recreates sender + enrolled', async () => {
     mockClassFindUnique.mockResolvedValue(foundClass as never)
     mockMessageThreadFindFirst.mockResolvedValue(createdThread as never)
     mockRegistrationFindMany.mockResolvedValue([{ userId: 'student_3' }] as never)
-    mockThreadParticipantCreateMany.mockResolvedValue({ count: 1 })
+    mockThreadParticipantDeleteMany.mockResolvedValue({ count: 3 })
+    mockThreadParticipantCreateMany.mockResolvedValue({ count: 2 })
     mockMessageCreate.mockResolvedValue(createdMessage as never)
     mockMessageThreadUpdate.mockResolvedValue(createdThread as never)
 
     const result = await sendAnnouncement({ classId, senderId, body: 'Class is moved to Studio B.' })
 
     expect(mockMessageThreadCreate).not.toHaveBeenCalled()
+    expect(mockThreadParticipantDeleteMany).toHaveBeenCalledWith({
+      where: { threadId: createdThread.id },
+    })
     expect(mockThreadParticipantCreateMany).toHaveBeenCalledWith({
-      data: [{ threadId: createdThread.id, userId: 'student_3', canReply: false }],
-      skipDuplicates: true,
+      data: [
+        { threadId: createdThread.id, userId: senderId, canReply: true },
+        { threadId: createdThread.id, userId: 'student_3', canReply: false },
+      ],
     })
     expect(mockMessageCreate).toHaveBeenCalledWith({
       data: { threadId: createdThread.id, senderId, body: 'Class is moved to Studio B.' },
@@ -141,6 +150,45 @@ describe('sendAnnouncement', () => {
       data: { lastMessageAt: createdMessage.sentAt },
     })
     expect(result).toEqual(createdMessage)
+  })
+
+  it('excludes cancelled students from the rebuilt participant list', async () => {
+    mockClassFindUnique.mockResolvedValue(foundClass as never)
+    mockMessageThreadFindFirst.mockResolvedValue(createdThread as never)
+    mockRegistrationFindMany.mockResolvedValue([{ userId: 'student_2' }] as never)
+    mockThreadParticipantDeleteMany.mockResolvedValue({ count: 3 })
+    mockThreadParticipantCreateMany.mockResolvedValue({ count: 2 })
+    mockMessageCreate.mockResolvedValue(createdMessage as never)
+    mockMessageThreadUpdate.mockResolvedValue(createdThread as never)
+
+    await sendAnnouncement({ classId, senderId, body: 'Update' })
+
+    expect(mockThreadParticipantCreateMany).toHaveBeenCalledWith({
+      data: [
+        { threadId: createdThread.id, userId: senderId, canReply: true },
+        { threadId: createdThread.id, userId: 'student_2', canReply: false },
+      ],
+    })
+  })
+
+  it('replaces old instructor with new instructor on follow-up send after instructor change', async () => {
+    const newInstructorId = 'user_instructor_2'
+    mockClassFindUnique.mockResolvedValue({ ...foundClass, instructorId: newInstructorId } as never)
+    mockMessageThreadFindFirst.mockResolvedValue(createdThread as never)
+    mockRegistrationFindMany.mockResolvedValue([{ userId: 'student_1' }] as never)
+    mockThreadParticipantDeleteMany.mockResolvedValue({ count: 2 })
+    mockThreadParticipantCreateMany.mockResolvedValue({ count: 2 })
+    mockMessageCreate.mockResolvedValue(createdMessage as never)
+    mockMessageThreadUpdate.mockResolvedValue(createdThread as never)
+
+    await sendAnnouncement({ classId, senderId: newInstructorId, body: 'Update' })
+
+    expect(mockThreadParticipantCreateMany).toHaveBeenCalledWith({
+      data: [
+        { threadId: createdThread.id, userId: newInstructorId, canReply: true },
+        { threadId: createdThread.id, userId: 'student_1', canReply: false },
+      ],
+    })
   })
 })
 
