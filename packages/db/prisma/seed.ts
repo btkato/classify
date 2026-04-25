@@ -435,6 +435,74 @@ async function seedRegistrations(standaloneClassIds: string[]) {
   console.log(`  Registrations: 2 enrolled in HIIT Blast`)
 }
 
+async function seedNotificationTriggers(): Promise<Record<string, string>> {
+  const adminId = 'user_seed_admin_1'
+
+  const defs = [
+    {
+      key: 'afterPurchase',
+      name: 'Welcome message',
+      triggerEvent: 'AFTER_PURCHASE' as const,
+      offsetDays: 0,
+      messageTemplate:
+        'Hi {student}, welcome to {studio}! Your membership is now active. We\'re excited to have you.',
+    },
+    {
+      key: 'expiringReminder',
+      name: 'Membership expiring soon',
+      triggerEvent: 'MEMBERSHIP_EXPIRING' as const,
+      offsetDays: 7,
+      messageTemplate:
+        'Hi {student}, your membership at {studio} expires in {days} days. Renew now to keep your access.',
+    },
+    {
+      key: 'expired',
+      name: 'Membership expired',
+      triggerEvent: 'MEMBERSHIP_EXPIRED' as const,
+      offsetDays: 0,
+      messageTemplate:
+        'Hi {student}, your membership at {studio} has expired. Rejoin today to get back to class!',
+    },
+  ]
+
+  const ids: Record<string, string> = {}
+  for (const def of defs) {
+    const trigger = await prisma.notificationTrigger.create({
+      data: {
+        createdByUserId: adminId,
+        name: def.name,
+        triggerEvent: def.triggerEvent,
+        offsetDays: def.offsetDays,
+        messageTemplate: def.messageTemplate,
+        isActive: true,
+      },
+    })
+    ids[def.key] = trigger.id
+    console.log(`  Trigger: ${def.name} (${def.triggerEvent})`)
+  }
+  return ids
+}
+
+async function seedNotificationJobs(triggerIds: Record<string, string>) {
+  const afterPurchaseTriggerId = triggerIds['afterPurchase']
+  if (!afterPurchaseTriggerId) return
+
+  const membership = await prisma.membership.findFirst({
+    where: { userId: 'user_seed_student_1', status: 'ACTIVE' },
+  })
+  if (!membership) return
+
+  await prisma.notificationJob.create({
+    data: {
+      userId: 'user_seed_student_1',
+      membershipId: membership.id,
+      triggerId: afterPurchaseTriggerId,
+      triggerAt: new Date(Date.now() - 60 * 60 * 1000),
+    },
+  })
+  console.log(`  Notification job: AFTER_PURCHASE for student_1 (due 1h ago, PENDING)`)
+}
+
 async function seedMessages(standaloneClassIds: string[]) {
   const adminId = 'user_seed_admin_1'
   const instructorId = 'user_seed_instructor_1'
@@ -711,6 +779,12 @@ async function main() {
 
   console.log('\nMemberships:')
   await seedMemberships()
+
+  console.log('\nNotification Triggers:')
+  const triggerIds = await seedNotificationTriggers()
+
+  console.log('\nNotification Jobs:')
+  await seedNotificationJobs(triggerIds)
 
   console.log('\nRegistrations:')
   await seedRegistrations(standaloneClassIds)

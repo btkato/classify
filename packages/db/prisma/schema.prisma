@@ -89,6 +89,7 @@ model User {
   lessonSets           LessonSet[]
   announcements        Announcement[]       @relation("InstructorAnnouncements")
   notificationJobs     NotificationJob[]
+  createdTriggers      NotificationTrigger[]
   threadParticipations ThreadParticipant[]
   sentMessages         Message[]
 }
@@ -287,6 +288,7 @@ model NotificationJob {
 
 model NotificationTrigger {
   id              String       @id @default(uuid())
+  createdByUserId String
   name            String
   triggerEvent    TriggerEvent
   offsetDays      Int
@@ -295,9 +297,11 @@ model NotificationTrigger {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
+  createdBy        User              @relation(fields: [createdByUserId], references: [id])
   notificationJobs NotificationJob[]
   messages         Message[]
 
+  @@index([createdByUserId])
   @@index([triggerEvent])
   @@index([isActive])
 }
