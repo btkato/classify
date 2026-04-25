@@ -164,6 +164,7 @@ export interface ThreadDetail {
   threadId: string
   type: 'DIRECT' | 'ANNOUNCEMENT'
   classId: string | null
+  className: string | null
   participants: MessageParticipant[]
   messages: ThreadMessage[]
 }

@@ -28,6 +28,7 @@ interface ThreadDetail {
   threadId: string
   type: ThreadType
   classId: string | null
+  className: string | null
   participants: ParticipantSummary[]
   messages: Message[]
 }
@@ -49,6 +50,7 @@ export async function createDirectMessage(input: {
         AND: [
           { participants: { some: { userId: input.adminId } } },
           { participants: { some: { userId: input.instructorId } } },
+          { participants: { every: { userId: { in: [input.adminId, input.instructorId] } } } },
         ],
       },
     })
@@ -140,6 +142,7 @@ export async function getThread(userId: string, threadId: string): Promise<Threa
     const foundThread = await transaction.messageThread.findUnique({
       where: { id: threadId },
       include: {
+        class: { select: { title: true } },
         participants: { select: { userId: true, canReply: true, user: { select: { firstName: true, lastName: true } } } },
         messages: { orderBy: { sentAt: 'asc' } },
       },
@@ -151,6 +154,7 @@ export async function getThread(userId: string, threadId: string): Promise<Threa
       threadId: foundThread.id,
       type: foundThread.type,
       classId: foundThread.classId,
+      className: foundThread.class?.title ?? null,
       participants: foundThread.participants,
       messages: foundThread.messages,
     }

@@ -216,6 +216,7 @@ describe('getThread', () => {
     id: threadId,
     type: 'DIRECT' as const,
     classId: null,
+    class: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     participants: [
@@ -244,6 +245,7 @@ describe('getThread', () => {
     })
     expect(result.threadId).toBe(threadId)
     expect(result.type).toBe('DIRECT')
+    expect(result.className).toBeNull()
     expect(result.messages).toHaveLength(1)
     expect(result.participants).toHaveLength(2)
     expect(result.participants[0]).toMatchObject({ user: { firstName: 'Admin', lastName: 'User' } })

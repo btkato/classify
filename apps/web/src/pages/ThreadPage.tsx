@@ -94,7 +94,7 @@ export default function ThreadPage() {
       <div className="mt-6">
         {thread.type === 'ANNOUNCEMENT' ? (
           <>
-            <h1 className="text-2xl font-bold">{otherParticipant?.user.firstName} {otherParticipant?.user.lastName}</h1>
+            <h1 className="text-2xl font-bold">{thread.className ?? 'Class Announcement'}</h1>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="secondary">Class announcement</Badge>
             </div>
