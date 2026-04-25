@@ -2,6 +2,8 @@ import './env.js'
 import http from 'http'
 import { app } from './app.js'
 import { initSocket } from './lib/socket.js'
+import { notificationQueue } from './lib/queue.js'
+import { startNotificationWorker } from './workers/notificationWorker.js'
 
 const PORT = process.env.PORT ?? 3000
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [
@@ -21,4 +23,6 @@ io.on('connection', (socket) => {
 
 httpServer.listen(PORT, () => {
   console.log(`API running on port ${PORT}`)
+  void notificationQueue.add('poll', {}, { repeat: { every: 60_000 } })
+  startNotificationWorker()
 })
