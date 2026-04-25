@@ -14,37 +14,4 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
 }
 
-export {
-  PrismaClient,
-  Prisma,
-  Role,
-  MembershipType,
-  MembershipStatus,
-  ClassStatus,
-  RegistrationStatus,
-  NotificationStatus,
-  TriggerEvent,
-  EnrollmentType,
-  ThreadType,
-} from '@prisma/client'
-
-export type {
-  User,
-  UserRole,
-  InstructorProfile,
-  Certification,
-  InstructorCertification,
-  Membership,
-  MembershipTransaction,
-  MembershipPlan,
-  Class,
-  LessonSet,
-  ClassCategory,
-  Registration,
-  Announcement,
-  NotificationJob,
-  NotificationTrigger,
-  MessageThread,
-  ThreadParticipant,
-  Message,
-} from '@prisma/client'
+export * from '@prisma/client'
