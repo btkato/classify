@@ -6,8 +6,8 @@ import { ForbiddenError, NotFoundError } from '../lib/errors.js'
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
     userRole: { findFirst: vi.fn() },
-    messageThread: { findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn() },
-    threadParticipant: { findMany: vi.fn(), findUnique: vi.fn(), createMany: vi.fn() },
+    messageThread: { findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() },
+    threadParticipant: { findUnique: vi.fn(), createMany: vi.fn() },
     message: { create: vi.fn(), updateMany: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -17,7 +17,8 @@ const mockUserRoleFindFirst = vi.mocked(prisma.userRole.findFirst)
 const mockMessageThreadFindFirst = vi.mocked(prisma.messageThread.findFirst)
 const mockMessageThreadCreate = vi.mocked(prisma.messageThread.create)
 const mockMessageThreadFindUnique = vi.mocked(prisma.messageThread.findUnique)
-const mockThreadParticipantFindMany = vi.mocked(prisma.threadParticipant.findMany)
+const mockMessageThreadUpdate = vi.mocked(prisma.messageThread.update)
+const mockMessageThreadFindMany = vi.mocked(prisma.messageThread.findMany)
 const mockThreadParticipantFindUnique = vi.mocked(prisma.threadParticipant.findUnique)
 const mockThreadParticipantCreateMany = vi.mocked(prisma.threadParticipant.createMany)
 const mockMessageCreate = vi.mocked(prisma.message.create)
@@ -66,6 +67,7 @@ describe('createDirectMessage', () => {
     mockMessageThreadCreate.mockResolvedValue(createdThread as never)
     mockThreadParticipantCreateMany.mockResolvedValue({ count: 2 })
     mockMessageCreate.mockResolvedValue(createdMessage as never)
+    mockMessageThreadUpdate.mockResolvedValue(createdThread as never)
 
     const result = await createDirectMessage({ adminId, instructorId, body: 'Hello!' })
 
@@ -79,6 +81,10 @@ describe('createDirectMessage', () => {
     expect(mockMessageCreate).toHaveBeenCalledWith({
       data: { threadId, senderId: adminId, body: 'Hello!' },
     })
+    expect(mockMessageThreadUpdate).toHaveBeenCalledWith({
+      where: { id: threadId },
+      data: { lastMessageAt: createdMessage.sentAt },
+    })
     expect(result).toEqual(createdMessage)
   })
 
@@ -86,6 +92,7 @@ describe('createDirectMessage', () => {
     mockUserRoleFindFirst.mockResolvedValue({ role: 'INSTRUCTOR' } as never)
     mockMessageThreadFindFirst.mockResolvedValue(createdThread as never)
     mockMessageCreate.mockResolvedValue(createdMessage as never)
+    mockMessageThreadUpdate.mockResolvedValue(createdThread as never)
 
     const result = await createDirectMessage({ adminId, instructorId, body: 'Hello!' })
 
@@ -94,82 +101,71 @@ describe('createDirectMessage', () => {
     expect(mockMessageCreate).toHaveBeenCalledWith({
       data: { threadId, senderId: adminId, body: 'Hello!' },
     })
+    expect(mockMessageThreadUpdate).toHaveBeenCalledWith({
+      where: { id: threadId },
+      data: { lastMessageAt: createdMessage.sentAt },
+    })
     expect(result).toEqual(createdMessage)
   })
 })
 
 describe('getInbox', () => {
-  const olderMessage = {
-    id: 'message_old',
+  const latestMessage = {
+    id: 'message_1',
     threadId: 'thread_1',
     senderId: adminId,
-    body: 'First message',
+    body: 'Hello there',
     sentAt: new Date('2026-01-10'),
     triggerId: null,
     readAt: null,
   }
 
-  const newerMessage = {
-    id: 'message_new',
-    threadId: 'thread_2',
-    senderId: instructorId,
-    body: 'Later message',
-    sentAt: new Date('2026-01-15'),
-    triggerId: null,
-    readAt: null,
+  const thread1 = {
+    id: 'thread_1',
+    type: 'DIRECT' as const,
+    classId: null,
+    lastMessageAt: new Date('2026-01-10'),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    participants: [
+      { userId: adminId, canReply: true },
+      { userId: instructorId, canReply: true },
+    ],
+    messages: [latestMessage],
   }
 
-  const participation1 = {
-    thread: {
-      id: 'thread_1',
-      type: 'DIRECT' as const,
-      classId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      participants: [
-        { userId: adminId, canReply: true },
-        { userId: instructorId, canReply: true },
-      ],
-      messages: [olderMessage],
-    },
-  }
-
-  const participation2 = {
-    thread: {
-      id: 'thread_2',
-      type: 'ANNOUNCEMENT' as const,
-      classId: 'class_1',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      participants: [{ userId: instructorId, canReply: true }],
-      messages: [newerMessage],
-    },
-  }
-
-  it('returns an empty array when user has no participations', async () => {
-    mockThreadParticipantFindMany.mockResolvedValue([] as never)
+  it('returns an empty array when user has no threads', async () => {
+    mockMessageThreadFindMany.mockResolvedValue([] as never)
 
     const result = await getInbox('user_1')
 
     expect(result).toEqual([])
   })
 
-  it('returns thread summaries sorted by latest message sentAt descending', async () => {
-    mockThreadParticipantFindMany.mockResolvedValue([participation1, participation2] as never)
+  it('queries threads ordered by lastMessageAt descending', async () => {
+    mockMessageThreadFindMany.mockResolvedValue([] as never)
+
+    await getInbox('user_1')
+
+    expect(mockMessageThreadFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { lastMessageAt: 'desc' } })
+    )
+  })
+
+  it('maps threads to summaries with latest message', async () => {
+    mockMessageThreadFindMany.mockResolvedValue([thread1] as never)
 
     const result = await getInbox('user_1')
 
-    expect(result).toHaveLength(2)
-    expect(result[0]?.threadId).toBe('thread_2')
-    expect(result[1]?.threadId).toBe('thread_1')
-    expect(result[0]?.latestMessage).toMatchObject({ id: 'message_new', body: 'Later message' })
+    expect(result).toHaveLength(1)
+    expect(result[0]?.threadId).toBe('thread_1')
+    expect(result[0]?.type).toBe('DIRECT')
+    expect(result[0]?.latestMessage).toMatchObject({ id: 'message_1', body: 'Hello there' })
+    expect(result[0]?.participants).toHaveLength(2)
   })
 
   it('returns latestMessage as null when the thread has no messages', async () => {
-    const emptyParticipation = {
-      thread: { ...participation1.thread, messages: [] },
-    }
-    mockThreadParticipantFindMany.mockResolvedValue([emptyParticipation] as never)
+    mockMessageThreadFindMany.mockResolvedValue([{ ...thread1, messages: [] }] as never)
 
     const result = await getInbox('user_1')
 
@@ -235,11 +231,16 @@ describe('replyToThread', () => {
   it('creates and returns the message when user can reply', async () => {
     mockThreadParticipantFindUnique.mockResolvedValue({ canReply: true } as never)
     mockMessageCreate.mockResolvedValue(createdMessage as never)
+    mockMessageThreadUpdate.mockResolvedValue(createdThread as never)
 
     const result = await replyToThread({ threadId, senderId: adminId, body: 'Hello!' })
 
     expect(mockMessageCreate).toHaveBeenCalledWith({
       data: { threadId, senderId: adminId, body: 'Hello!' },
+    })
+    expect(mockMessageThreadUpdate).toHaveBeenCalledWith({
+      where: { id: threadId },
+      data: { lastMessageAt: createdMessage.sentAt },
     })
     expect(result).toEqual(createdMessage)
   })

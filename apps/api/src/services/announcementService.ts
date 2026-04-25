@@ -72,9 +72,14 @@ export async function sendAnnouncement(input: SendAnnouncementInput): Promise<Me
         ],
       })
 
-      return transaction.message.create({
+      const newMessage = await transaction.message.create({
         data: { threadId: newThread.id, senderId: input.senderId, body: input.body },
       })
+      await transaction.messageThread.update({
+        where: { id: newThread.id },
+        data: { lastMessageAt: newMessage.sentAt },
+      })
+      return newMessage
     }
 
     await transaction.threadParticipant.createMany({
@@ -86,8 +91,13 @@ export async function sendAnnouncement(input: SendAnnouncementInput): Promise<Me
       skipDuplicates: true,
     })
 
-    return transaction.message.create({
+    const newMessage = await transaction.message.create({
       data: { threadId: foundThread.id, senderId: input.senderId, body: input.body },
     })
+    await transaction.messageThread.update({
+      where: { id: foundThread.id },
+      data: { lastMessageAt: newMessage.sentAt },
+    })
+    return newMessage
   })
 }

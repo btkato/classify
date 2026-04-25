@@ -6,7 +6,7 @@ import { ForbiddenError, NotFoundError } from '../lib/errors.js'
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
     class: { findUnique: vi.fn() },
-    messageThread: { findFirst: vi.fn(), create: vi.fn() },
+    messageThread: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     registration: { findMany: vi.fn() },
     threadParticipant: { createMany: vi.fn() },
     message: { create: vi.fn(), findMany: vi.fn() },
@@ -17,6 +17,7 @@ vi.mock('../lib/prisma.js', () => ({
 const mockClassFindUnique = vi.mocked(prisma.class.findUnique)
 const mockMessageThreadFindFirst = vi.mocked(prisma.messageThread.findFirst)
 const mockMessageThreadCreate = vi.mocked(prisma.messageThread.create)
+const mockMessageThreadUpdate = vi.mocked(prisma.messageThread.update)
 const mockRegistrationFindMany = vi.mocked(prisma.registration.findMany)
 const mockThreadParticipantCreateMany = vi.mocked(prisma.threadParticipant.createMany)
 const mockMessageCreate = vi.mocked(prisma.message.create)
@@ -93,6 +94,7 @@ describe('sendAnnouncement', () => {
     mockMessageThreadCreate.mockResolvedValue(createdThread as never)
     mockThreadParticipantCreateMany.mockResolvedValue({ count: 3 })
     mockMessageCreate.mockResolvedValue(createdMessage as never)
+    mockMessageThreadUpdate.mockResolvedValue(createdThread as never)
 
     const result = await sendAnnouncement({ classId, senderId, body: 'Class is moved to Studio B.' })
 
@@ -109,6 +111,10 @@ describe('sendAnnouncement', () => {
     expect(mockMessageCreate).toHaveBeenCalledWith({
       data: { threadId: createdThread.id, senderId, body: 'Class is moved to Studio B.' },
     })
+    expect(mockMessageThreadUpdate).toHaveBeenCalledWith({
+      where: { id: createdThread.id },
+      data: { lastMessageAt: createdMessage.sentAt },
+    })
     expect(result).toEqual(createdMessage)
   })
 
@@ -118,6 +124,7 @@ describe('sendAnnouncement', () => {
     mockRegistrationFindMany.mockResolvedValue([{ userId: 'student_3' }] as never)
     mockThreadParticipantCreateMany.mockResolvedValue({ count: 1 })
     mockMessageCreate.mockResolvedValue(createdMessage as never)
+    mockMessageThreadUpdate.mockResolvedValue(createdThread as never)
 
     const result = await sendAnnouncement({ classId, senderId, body: 'Class is moved to Studio B.' })
 
@@ -128,6 +135,10 @@ describe('sendAnnouncement', () => {
     })
     expect(mockMessageCreate).toHaveBeenCalledWith({
       data: { threadId: createdThread.id, senderId, body: 'Class is moved to Studio B.' },
+    })
+    expect(mockMessageThreadUpdate).toHaveBeenCalledWith({
+      where: { id: createdThread.id },
+      data: { lastMessageAt: createdMessage.sentAt },
     })
     expect(result).toEqual(createdMessage)
   })
