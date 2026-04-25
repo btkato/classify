@@ -36,6 +36,7 @@ export type {
   InstructorCertification,
   Membership,
   MembershipTransaction,
+  MembershipPlan,
   Class,
   LessonSet,
   ClassCategory,
