@@ -3,31 +3,27 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@clerk/clerk-react'
 import { Button } from '../components/ui/button'
+import { Skeleton } from '../components/ui/skeleton'
 import { apiFetch } from '../lib/api'
-import type { Membership } from '../lib/types'
+import { useMembershipPlans } from '../hooks/useMembershipPlans'
+import type { Membership, MembershipPlan } from '../lib/types'
 
-interface MembershipOption {
-  type: string
-  label: string
-  price: string
-  description: string
+function formatPrice(priceInCents: number, type: string): string {
+  const dollars = (priceInCents / 100).toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })
+  return type === 'CONTINUOUS_MONTHLY' ? `${dollars}/mo` : dollars
 }
-
-// Prices are placeholders — replaced with Stripe product data in Phase 8
-const MEMBERSHIP_OPTIONS: MembershipOption[] = [
-  { type: 'DROP_IN', label: 'Drop-in', price: '$20', description: 'Single class access. No expiry.' },
-  { type: 'CLASS_PACK_5', label: 'Class Pack (5)', price: '$85', description: '5 classes. No expiry. $17 per class.' },
-  { type: 'CLASS_PACK_10', label: 'Class Pack (10)', price: '$160', description: '10 classes. No expiry. $16 per class.' },
-  { type: 'MONTHLY', label: 'Monthly', price: '$120', description: 'Unlimited classes. 30 days access.' },
-  { type: 'CONTINUOUS_MONTHLY', label: 'Continuous Monthly', price: '$110/mo', description: 'Unlimited classes. Auto-renews monthly. Cancel anytime.' },
-  { type: 'YEARLY', label: 'Yearly', price: '$1,100', description: 'Unlimited classes. 365 days. ~$92 per month.' },
-]
 
 export default function MembershipPurchasePage() {
   const { getToken } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [selectedType, setSelectedType] = useState<string | null>(null)
+  const { data: plans, isLoading } = useMembershipPlans()
 
   const purchaseMutation = useMutation({
     mutationFn: async (type: string) => {
@@ -53,30 +49,34 @@ export default function MembershipPurchasePage() {
       <p className="mt-1 text-sm text-muted-foreground">Choose the option that fits your schedule.</p>
 
       <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {MEMBERSHIP_OPTIONS.map((option) => (
-          <label key={option.type} className="cursor-pointer h-full">
-            <input
-              type="radio"
-              name="membershipType"
-              value={option.type}
-              className="sr-only"
-              onChange={() => setSelectedType(option.type)}
-            />
-            <div
-              className={`h-full rounded-lg border-2 px-5 py-4 flex flex-col transition-colors hover:border-foreground/40 ${
-                selectedType === option.type
-                  ? 'border-foreground bg-muted/50'
-                  : 'border-border bg-card'
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <p className="font-semibold text-sm">{option.label}</p>
-                <p className="font-bold text-sm">{option.price}</p>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{option.description}</p>
-            </div>
-          </label>
-        ))}
+        {isLoading
+          ? Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={index} data-testid="plan-skeleton" className="h-24 w-full rounded-lg" />
+            ))
+          : plans?.map((plan: MembershipPlan) => (
+              <label key={plan.type} className="cursor-pointer h-full">
+                <input
+                  type="radio"
+                  name="membershipType"
+                  value={plan.type}
+                  className="sr-only"
+                  onChange={() => setSelectedType(plan.type)}
+                />
+                <div
+                  className={`h-full rounded-lg border-2 px-5 py-4 flex flex-col transition-colors hover:border-foreground/40 ${
+                    selectedType === plan.type
+                      ? 'border-foreground bg-muted/50'
+                      : 'border-border bg-card'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <p className="font-semibold text-sm">{plan.displayName}</p>
+                    <p className="font-bold text-sm">{formatPrice(plan.priceInCents, plan.type)}</p>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
+                </div>
+              </label>
+            ))}
       </div>
 
       <div className="mt-8">
