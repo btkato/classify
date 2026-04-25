@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/requireAuth.js'
 import { requireRoles } from '../middleware/requireRoles.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import { createClass, listClasses, getClass, updateClass, cancelClass, getRoster } from '../services/classService.js'
+import { getClassAnnouncements } from '../services/announcementService.js'
 import { prisma } from '../lib/prisma.js'
 
 export const classesRouter = express.Router()
@@ -92,6 +93,15 @@ classesRouter.get(
 )
 
 const classParamsSchema = z.object({ id: z.string().min(1) })
+
+classesRouter.get(
+  '/:id/announcements',
+  asyncHandler(async (req, res) => {
+    const { id } = classParamsSchema.parse(req.params)
+    const result = await getClassAnnouncements(id)
+    res.status(200).json(result)
+  })
+)
 
 classesRouter.get(
   '/:id/roster',
