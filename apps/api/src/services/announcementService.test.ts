@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prisma } from '../lib/prisma.js'
-import { sendAnnouncement } from './announcementService.js'
+import { sendAnnouncement, getClassAnnouncements } from './announcementService.js'
 import { ForbiddenError, NotFoundError } from '../lib/errors.js'
 
 vi.mock('../lib/prisma.js', () => ({
@@ -9,7 +9,7 @@ vi.mock('../lib/prisma.js', () => ({
     messageThread: { findFirst: vi.fn(), create: vi.fn() },
     registration: { findMany: vi.fn() },
     threadParticipant: { createMany: vi.fn() },
-    message: { create: vi.fn() },
+    message: { create: vi.fn(), findMany: vi.fn() },
     $transaction: vi.fn(),
   },
 }))
@@ -20,6 +20,7 @@ const mockMessageThreadCreate = vi.mocked(prisma.messageThread.create)
 const mockRegistrationFindMany = vi.mocked(prisma.registration.findMany)
 const mockThreadParticipantCreateMany = vi.mocked(prisma.threadParticipant.createMany)
 const mockMessageCreate = vi.mocked(prisma.message.create)
+const mockMessageFindMany = vi.mocked(prisma.message.findMany)
 const mockTransaction = vi.mocked(prisma.$transaction)
 
 const senderId = 'user_instructor_1'
@@ -129,5 +130,41 @@ describe('sendAnnouncement', () => {
       data: { threadId: createdThread.id, senderId, body: 'Class is moved to Studio B.' },
     })
     expect(result).toEqual(createdMessage)
+  })
+})
+
+describe('getClassAnnouncements', () => {
+  it('throws NotFoundError when class does not exist', async () => {
+    mockClassFindUnique.mockResolvedValue(null)
+
+    await expect(getClassAnnouncements(classId)).rejects.toThrow(NotFoundError)
+  })
+
+  it('returns { threadId: null, messages: [] } when no announcement thread exists', async () => {
+    mockClassFindUnique.mockResolvedValue(foundClass as never)
+    mockMessageThreadFindFirst.mockResolvedValue(null)
+
+    const result = await getClassAnnouncements(classId)
+
+    expect(result).toEqual({ threadId: null, messages: [] })
+    expect(mockMessageFindMany).not.toHaveBeenCalled()
+  })
+
+  it('returns the thread id and messages ordered by sentAt when a thread exists', async () => {
+    const messages = [
+      { ...createdMessage, id: 'message_1', sentAt: new Date('2026-01-01') },
+      { ...createdMessage, id: 'message_2', sentAt: new Date('2026-01-02') },
+    ]
+    mockClassFindUnique.mockResolvedValue(foundClass as never)
+    mockMessageThreadFindFirst.mockResolvedValue(createdThread as never)
+    mockMessageFindMany.mockResolvedValue(messages as never)
+
+    const result = await getClassAnnouncements(classId)
+
+    expect(mockMessageFindMany).toHaveBeenCalledWith({
+      where: { threadId: createdThread.id },
+      orderBy: { sentAt: 'asc' },
+    })
+    expect(result).toEqual({ threadId: createdThread.id, messages })
   })
 })

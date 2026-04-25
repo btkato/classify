@@ -25,10 +25,15 @@ vi.mock('../services/classService.js', () => ({
   getRoster: vi.fn(),
 }))
 
+vi.mock('../services/announcementService.js', () => ({
+  getClassAnnouncements: vi.fn(),
+}))
+
 import { app } from '../app.js'
 import { getAuth } from '@clerk/express'
 import { prisma } from '../lib/prisma.js'
 import * as classService from '../services/classService.js'
+import * as announcementService from '../services/announcementService.js'
 
 const mockGetAuth = vi.mocked(getAuth)
 const mockFindMany = vi.mocked(prisma.userRole.findMany)
@@ -38,6 +43,7 @@ const mockGetClass = vi.mocked(classService.getClass)
 const mockUpdateClass = vi.mocked(classService.updateClass)
 const mockCancelClass = vi.mocked(classService.cancelClass)
 const mockGetRoster = vi.mocked(classService.getRoster)
+const mockGetClassAnnouncements = vi.mocked(announcementService.getClassAnnouncements)
 
 const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString()
 
@@ -657,5 +663,70 @@ describe('GET /classes/:id/roster', () => {
 
       expect(res.status).toBe(403)
     })
+  })
+})
+
+describe('GET /classes/:id/announcements', () => {
+  const announcementsResult = {
+    threadId: 'thread_1',
+    messages: [
+      {
+        id: 'message_1',
+        threadId: 'thread_1',
+        senderId: 'user_instructor_1',
+        body: 'Class moved to Studio B.',
+        triggerId: null,
+        readAt: null,
+        sentAt: new Date().toISOString(),
+      },
+    ],
+  }
+
+  it('is not shadowed by GET /:id — announcements path routes to the correct handler', async () => {
+    mockGetClassAnnouncements.mockResolvedValue({ threadId: null, messages: [] } as never)
+
+    await request(app).get('/classes/class_1/announcements')
+
+    expect(mockGetClassAnnouncements).toHaveBeenCalled()
+    expect(mockGetClass).not.toHaveBeenCalled()
+  })
+
+  it('does not require authentication', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+    mockGetClassAnnouncements.mockResolvedValue({ threadId: null, messages: [] } as never)
+
+    const res = await request(app).get('/classes/class_1/announcements')
+
+    expect(res.status).toBe(200)
+  })
+
+  it('returns 200 with threadId null and empty messages when no thread exists', async () => {
+    mockGetClassAnnouncements.mockResolvedValue({ threadId: null, messages: [] } as never)
+
+    const res = await request(app).get('/classes/class_1/announcements')
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ threadId: null, messages: [] })
+    expect(mockGetClassAnnouncements).toHaveBeenCalledWith('class_1')
+  })
+
+  it('returns 200 with thread id and messages on success', async () => {
+    mockGetClassAnnouncements.mockResolvedValue(announcementsResult as never)
+
+    const res = await request(app).get('/classes/class_1/announcements')
+
+    expect(res.status).toBe(200)
+    expect(res.body.threadId).toBe('thread_1')
+    expect(res.body.messages).toHaveLength(1)
+    expect(res.body.messages[0]).toMatchObject({ id: 'message_1', body: 'Class moved to Studio B.' })
+  })
+
+  it('returns 404 when class does not exist', async () => {
+    mockGetClassAnnouncements.mockRejectedValue(new NotFoundError('Class not found'))
+
+    const res = await request(app).get('/classes/nonexistent/announcements')
+
+    expect(res.status).toBe(404)
+    expect(res.body).toMatchObject({ error: { message: 'Class not found' } })
   })
 })
