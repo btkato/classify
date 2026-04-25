@@ -1,7 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prisma } from '../lib/prisma.js'
+import { getIo } from '../lib/socket.js'
 import { sendAnnouncement, getClassAnnouncements } from './announcementService.js'
 import { ForbiddenError, NotFoundError } from '../lib/errors.js'
+
+const { mockEmit, mockTo } = vi.hoisted(() => {
+  const mockEmit = vi.fn()
+  const mockTo = vi.fn().mockReturnValue({ emit: mockEmit })
+  return { mockEmit, mockTo }
+})
+
+vi.mock('../lib/socket.js', () => ({
+  getIo: vi.fn().mockReturnValue({ to: mockTo }),
+}))
 
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
@@ -54,6 +65,8 @@ const createdMessage = {
 beforeEach(() => {
   vi.resetAllMocks()
   mockTransaction.mockImplementation(async (fn) => fn(prisma as never))
+  vi.mocked(getIo).mockReturnValue({ to: mockTo } as never)
+  mockTo.mockReturnValue({ emit: mockEmit })
 })
 
 describe('sendAnnouncement', () => {
@@ -85,6 +98,9 @@ describe('sendAnnouncement', () => {
     await expect(
       sendAnnouncement({ classId, senderId, body: 'Hello', isAdmin: true })
     ).resolves.toEqual(createdMessage)
+
+    expect(mockTo).toHaveBeenCalledWith(`user:${senderId}`)
+    expect(mockEmit).toHaveBeenCalledWith('new-message', { threadId: createdThread.id })
   })
 
   it('creates a new thread with participants and returns the message when no thread exists', async () => {
@@ -118,6 +134,10 @@ describe('sendAnnouncement', () => {
       where: { id: createdThread.id },
       data: { lastMessageAt: createdMessage.sentAt },
     })
+    expect(mockTo).toHaveBeenCalledWith(`user:${senderId}`)
+    expect(mockTo).toHaveBeenCalledWith('user:student_1')
+    expect(mockTo).toHaveBeenCalledWith('user:student_2')
+    expect(mockEmit).toHaveBeenCalledWith('new-message', { threadId: createdThread.id })
     expect(result).toEqual(createdMessage)
   })
 
@@ -149,6 +169,9 @@ describe('sendAnnouncement', () => {
       where: { id: createdThread.id },
       data: { lastMessageAt: createdMessage.sentAt },
     })
+    expect(mockTo).toHaveBeenCalledWith(`user:${senderId}`)
+    expect(mockTo).toHaveBeenCalledWith('user:student_3')
+    expect(mockEmit).toHaveBeenCalledWith('new-message', { threadId: createdThread.id })
     expect(result).toEqual(createdMessage)
   })
 
@@ -169,6 +192,9 @@ describe('sendAnnouncement', () => {
         { threadId: createdThread.id, userId: 'student_2', canReply: false },
       ],
     })
+    expect(mockTo).toHaveBeenCalledWith(`user:${senderId}`)
+    expect(mockTo).toHaveBeenCalledWith('user:student_2')
+    expect(mockEmit).toHaveBeenCalledWith('new-message', { threadId: createdThread.id })
   })
 
   it('replaces old instructor with new instructor on follow-up send after instructor change', async () => {
@@ -189,6 +215,9 @@ describe('sendAnnouncement', () => {
         { threadId: createdThread.id, userId: 'student_1', canReply: false },
       ],
     })
+    expect(mockTo).toHaveBeenCalledWith(`user:${newInstructorId}`)
+    expect(mockTo).toHaveBeenCalledWith('user:student_1')
+    expect(mockEmit).toHaveBeenCalledWith('new-message', { threadId: createdThread.id })
   })
 })
 

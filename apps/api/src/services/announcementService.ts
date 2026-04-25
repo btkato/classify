@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js'
+import { getIo } from '../lib/socket.js'
 import { ForbiddenError, NotFoundError } from '../lib/errors.js'
 import type { Message } from 'db'
 
@@ -46,7 +47,7 @@ export async function sendAnnouncement(input: SendAnnouncementInput): Promise<Me
     throw new ForbiddenError('You are not assigned to this class')
   }
 
-  return prisma.$transaction(async (transaction) => {
+  const { newMessage, threadId, participantIds } = await prisma.$transaction(async (transaction) => {
     const foundThread = await transaction.messageThread.findFirst({
       where: { classId: input.classId, type: 'ANNOUNCEMENT' },
     })
@@ -55,6 +56,8 @@ export async function sendAnnouncement(input: SendAnnouncementInput): Promise<Me
       where: { classId: input.classId, status: 'ENROLLED' },
       select: { userId: true },
     })
+
+    const participantIds = [input.senderId, ...enrolledRegistrations.map((registration) => registration.userId)]
 
     if (!foundThread) {
       const newThread = await transaction.messageThread.create({
@@ -79,7 +82,7 @@ export async function sendAnnouncement(input: SendAnnouncementInput): Promise<Me
         where: { id: newThread.id },
         data: { lastMessageAt: newMessage.sentAt },
       })
-      return newMessage
+      return { newMessage, threadId: newThread.id, participantIds }
     }
 
     await transaction.threadParticipant.deleteMany({
@@ -104,6 +107,13 @@ export async function sendAnnouncement(input: SendAnnouncementInput): Promise<Me
       where: { id: foundThread.id },
       data: { lastMessageAt: newMessage.sentAt },
     })
-    return newMessage
+    return { newMessage, threadId: foundThread.id, participantIds }
   })
+
+  const io = getIo()
+  for (const userId of participantIds) {
+    io.to(`user:${userId}`).emit('new-message', { threadId })
+  }
+
+  return newMessage
 }
