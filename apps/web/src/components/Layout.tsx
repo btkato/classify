@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
 import Navbar from './Navbar'
 import { Skeleton } from './ui/skeleton'
+import { useSocket } from '../hooks/useSocket'
 
 function PageSkeleton() {
   return (
@@ -16,6 +17,8 @@ function PageSkeleton() {
 }
 
 export default function Layout() {
+  useSocket()
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
