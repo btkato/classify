@@ -8,12 +8,23 @@ interface AnnouncementsResult {
   messages: Message[]
 }
 
-export async function getClassAnnouncements(classId: string): Promise<AnnouncementsResult> {
+export async function getClassAnnouncements(
+  classId: string,
+  userId: string,
+  isAdmin = false
+): Promise<AnnouncementsResult> {
   const foundClass = await prisma.class.findUnique({
     where: { id: classId },
-    select: { id: true },
+    select: { id: true, instructorId: true },
   })
   if (!foundClass) throw new NotFoundError('Class not found')
+
+  if (!isAdmin && foundClass.instructorId !== userId) {
+    const enrollment = await prisma.registration.findFirst({
+      where: { classId, userId, status: 'ENROLLED' },
+    })
+    if (!enrollment) throw new ForbiddenError('You are not enrolled in this class')
+  }
 
   const foundThread = await prisma.messageThread.findFirst({
     where: { classId, type: 'ANNOUNCEMENT' },

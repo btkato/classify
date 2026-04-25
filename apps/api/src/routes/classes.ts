@@ -96,9 +96,17 @@ const classParamsSchema = z.object({ id: z.string().min(1) })
 
 classesRouter.get(
   '/:id/announcements',
+  requireAuth,
+  requireRoles(['STUDENT', 'INSTRUCTOR', 'ADMIN']),
   asyncHandler(async (req, res) => {
     const { id } = classParamsSchema.parse(req.params)
-    const result = await getClassAnnouncements(id)
+    const userId = req.auth?.userId
+    if (!userId) {
+      res.status(401).json({ error: { message: 'Unauthorized' } })
+      return
+    }
+    const isAdmin = (req.userRoles ?? []).some((userRole) => userRole.role === 'ADMIN')
+    const result = await getClassAnnouncements(id, userId, isAdmin)
     res.status(200).json(result)
   })
 )

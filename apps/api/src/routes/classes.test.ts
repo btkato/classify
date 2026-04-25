@@ -691,13 +691,20 @@ describe('GET /classes/:id/announcements', () => {
     expect(mockGetClass).not.toHaveBeenCalled()
   })
 
-  it('does not require authentication', async () => {
+  it('returns 401 when not authenticated', async () => {
     mockGetAuth.mockReturnValue({ userId: null } as never)
-    mockGetClassAnnouncements.mockResolvedValue({ threadId: null, messages: [] } as never)
 
     const res = await request(app).get('/classes/class_1/announcements')
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 when service throws ForbiddenError', async () => {
+    mockGetClassAnnouncements.mockRejectedValue(new ForbiddenError('You are not enrolled in this class'))
+
+    const res = await request(app).get('/classes/class_1/announcements')
+
+    expect(res.status).toBe(403)
   })
 
   it('returns 200 with threadId null and empty messages when no thread exists', async () => {
@@ -707,7 +714,7 @@ describe('GET /classes/:id/announcements', () => {
 
     expect(res.status).toBe(200)
     expect(res.body).toEqual({ threadId: null, messages: [] })
-    expect(mockGetClassAnnouncements).toHaveBeenCalledWith('class_1')
+    expect(mockGetClassAnnouncements).toHaveBeenCalledWith('class_1', 'user_1', false)
   })
 
   it('returns 200 with thread id and messages on success', async () => {

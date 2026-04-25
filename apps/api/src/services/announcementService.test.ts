@@ -18,7 +18,7 @@ vi.mock('../lib/prisma.js', () => ({
   prisma: {
     class: { findUnique: vi.fn() },
     messageThread: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
-    registration: { findMany: vi.fn() },
+    registration: { findMany: vi.fn(), findFirst: vi.fn() },
     threadParticipant: { createMany: vi.fn(), deleteMany: vi.fn() },
     message: { create: vi.fn(), findMany: vi.fn() },
     $transaction: vi.fn(),
@@ -30,6 +30,7 @@ const mockMessageThreadFindFirst = vi.mocked(prisma.messageThread.findFirst)
 const mockMessageThreadCreate = vi.mocked(prisma.messageThread.create)
 const mockMessageThreadUpdate = vi.mocked(prisma.messageThread.update)
 const mockRegistrationFindMany = vi.mocked(prisma.registration.findMany)
+const mockRegistrationFindFirst = vi.mocked(prisma.registration.findFirst)
 const mockThreadParticipantCreateMany = vi.mocked(prisma.threadParticipant.createMany)
 const mockThreadParticipantDeleteMany = vi.mocked(prisma.threadParticipant.deleteMany)
 const mockMessageCreate = vi.mocked(prisma.message.create)
@@ -225,14 +226,41 @@ describe('getClassAnnouncements', () => {
   it('throws NotFoundError when class does not exist', async () => {
     mockClassFindUnique.mockResolvedValue(null)
 
-    await expect(getClassAnnouncements(classId)).rejects.toThrow(NotFoundError)
+    await expect(getClassAnnouncements(classId, senderId)).rejects.toThrow(NotFoundError)
+  })
+
+  it('throws ForbiddenError when user is not the instructor and not enrolled', async () => {
+    mockClassFindUnique.mockResolvedValue(foundClass as never)
+    mockRegistrationFindFirst.mockResolvedValue(null)
+
+    await expect(getClassAnnouncements(classId, 'user_stranger')).rejects.toThrow(ForbiddenError)
+  })
+
+  it('allows when user is enrolled', async () => {
+    mockClassFindUnique.mockResolvedValue(foundClass as never)
+    mockRegistrationFindFirst.mockResolvedValue({ id: 'reg_1', status: 'ENROLLED' } as never)
+    mockMessageThreadFindFirst.mockResolvedValue(null)
+
+    const result = await getClassAnnouncements(classId, 'user_student_1')
+
+    expect(result).toEqual({ threadId: null, messages: [] })
+  })
+
+  it('allows when isAdmin is true regardless of enrollment', async () => {
+    mockClassFindUnique.mockResolvedValue({ ...foundClass, instructorId: 'other_instructor' } as never)
+    mockMessageThreadFindFirst.mockResolvedValue(null)
+
+    const result = await getClassAnnouncements(classId, 'user_admin_1', true)
+
+    expect(mockRegistrationFindFirst).not.toHaveBeenCalled()
+    expect(result).toEqual({ threadId: null, messages: [] })
   })
 
   it('returns { threadId: null, messages: [] } when no announcement thread exists', async () => {
     mockClassFindUnique.mockResolvedValue(foundClass as never)
     mockMessageThreadFindFirst.mockResolvedValue(null)
 
-    const result = await getClassAnnouncements(classId)
+    const result = await getClassAnnouncements(classId, senderId)
 
     expect(result).toEqual({ threadId: null, messages: [] })
     expect(mockMessageFindMany).not.toHaveBeenCalled()
@@ -247,7 +275,7 @@ describe('getClassAnnouncements', () => {
     mockMessageThreadFindFirst.mockResolvedValue(createdThread as never)
     mockMessageFindMany.mockResolvedValue(messages as never)
 
-    const result = await getClassAnnouncements(classId)
+    const result = await getClassAnnouncements(classId, senderId)
 
     expect(mockMessageFindMany).toHaveBeenCalledWith({
       where: { threadId: createdThread.id },
