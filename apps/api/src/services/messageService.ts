@@ -45,9 +45,14 @@ export async function createDirectMessage(input: {
     })
 
     if (existingThread) {
-      return transaction.message.create({
+      const newMessage = await transaction.message.create({
         data: { threadId: existingThread.id, senderId: input.adminId, body: input.body },
       })
+      await transaction.messageThread.update({
+        where: { id: existingThread.id },
+        data: { lastMessageAt: newMessage.sentAt },
+      })
+      return newMessage
     }
 
     const newThread = await transaction.messageThread.create({
@@ -61,27 +66,28 @@ export async function createDirectMessage(input: {
       ],
     })
 
-    return transaction.message.create({
+    const newMessage = await transaction.message.create({
       data: { threadId: newThread.id, senderId: input.adminId, body: input.body },
     })
+    await transaction.messageThread.update({
+      where: { id: newThread.id },
+      data: { lastMessageAt: newMessage.sentAt },
+    })
+    return newMessage
   })
 }
 
 export async function getInbox(userId: string): Promise<ThreadSummary[]> {
-  const participations = await prisma.threadParticipant.findMany({
-    where: { userId },
+  const threads = await prisma.messageThread.findMany({
+    where: { participants: { some: { userId } } },
     include: {
-      thread: {
-        include: {
-          participants: { select: { userId: true, canReply: true } },
-          messages: { orderBy: { sentAt: 'desc' }, take: 1 },
-        },
-      },
+      participants: { select: { userId: true, canReply: true } },
+      messages: { orderBy: { sentAt: 'desc' }, take: 1 },
     },
+    orderBy: { lastMessageAt: 'desc' },
   })
 
-  const summaries = participations.map((participation) => {
-    const { thread } = participation
+  return threads.map((thread) => {
     const latestMessage = thread.messages[0] ?? null
     return {
       threadId: thread.id,
@@ -97,13 +103,6 @@ export async function getInbox(userId: string): Promise<ThreadSummary[]> {
           }
         : null,
     }
-  })
-
-  return summaries.sort((a, b) => {
-    if (!a.latestMessage && !b.latestMessage) return 0
-    if (!a.latestMessage) return 1
-    if (!b.latestMessage) return -1
-    return b.latestMessage.sentAt.getTime() - a.latestMessage.sentAt.getTime()
   })
 }
 
@@ -154,7 +153,14 @@ export async function replyToThread(input: {
   if (!participant.canReply)
     throw new ForbiddenError('You do not have permission to reply in this thread')
 
-  return prisma.message.create({
-    data: { threadId: input.threadId, senderId: input.senderId, body: input.body },
+  return prisma.$transaction(async (transaction) => {
+    const newMessage = await transaction.message.create({
+      data: { threadId: input.threadId, senderId: input.senderId, body: input.body },
+    })
+    await transaction.messageThread.update({
+      where: { id: input.threadId },
+      data: { lastMessageAt: newMessage.sentAt },
+    })
+    return newMessage
   })
 }
