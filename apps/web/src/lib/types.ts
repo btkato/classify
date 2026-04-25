@@ -126,3 +126,44 @@ export interface LessonSet {
 export interface LessonSetWithClasses extends LessonSet {
   classes: Class[]
 }
+
+export interface MessageParticipant {
+  userId: string
+  canReply: boolean
+  user: { firstName: string; lastName: string }
+}
+
+export interface InboxMessage {
+  id: string
+  body: string
+  sentAt: string
+  senderId: string
+  readAt: string | null
+}
+
+export interface ThreadSummary {
+  threadId: string
+  type: 'DIRECT' | 'ANNOUNCEMENT'
+  classId: string | null
+  className: string | null
+  participants: MessageParticipant[]
+  latestMessage: InboxMessage | null
+}
+
+export interface ThreadMessage {
+  id: string
+  threadId: string
+  senderId: string
+  body: string
+  triggerId: string | null
+  readAt: string | null
+  sentAt: string
+}
+
+export interface ThreadDetail {
+  threadId: string
+  type: 'DIRECT' | 'ANNOUNCEMENT'
+  classId: string | null
+  participants: MessageParticipant[]
+  messages: ThreadMessage[]
+}
