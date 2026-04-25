@@ -349,3 +349,17 @@ model Message {
   @@index([senderId])
   @@index([threadId, sentAt])
 }
+
+model MembershipPlan {
+  id            String         @id @default(uuid())
+  type          MembershipType @unique
+  displayName   String
+  description   String
+  priceInCents  Int
+  stripePriceId String?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("membership_plans")
+}
