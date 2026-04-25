@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js'
+import { getIo } from '../lib/socket.js'
 import { ForbiddenError, NotFoundError } from '../lib/errors.js'
 import type { Message, ThreadType } from 'db'
 
@@ -41,7 +42,7 @@ export async function createDirectMessage(input: {
   })
   if (!instructorRole) throw new NotFoundError('Instructor not found')
 
-  return prisma.$transaction(async (transaction) => {
+  const { newMessage, threadId } = await prisma.$transaction(async (transaction) => {
     const existingThread = await transaction.messageThread.findFirst({
       where: {
         type: 'DIRECT',
@@ -60,7 +61,7 @@ export async function createDirectMessage(input: {
         where: { id: existingThread.id },
         data: { lastMessageAt: newMessage.sentAt },
       })
-      return newMessage
+      return { newMessage, threadId: existingThread.id }
     }
 
     const newThread = await transaction.messageThread.create({
@@ -81,8 +82,14 @@ export async function createDirectMessage(input: {
       where: { id: newThread.id },
       data: { lastMessageAt: newMessage.sentAt },
     })
-    return newMessage
+    return { newMessage, threadId: newThread.id }
   })
+
+  const io = getIo()
+  io.to(`user:${input.adminId}`).emit('new-message', { threadId })
+  io.to(`user:${input.instructorId}`).emit('new-message', { threadId })
+
+  return newMessage
 }
 
 export async function getInbox(userId: string): Promise<ThreadSummary[]> {
@@ -164,7 +171,7 @@ export async function replyToThread(input: {
   if (!participant.canReply)
     throw new ForbiddenError('You do not have permission to reply in this thread')
 
-  return prisma.$transaction(async (transaction) => {
+  const newMessage = await prisma.$transaction(async (transaction) => {
     const newMessage = await transaction.message.create({
       data: { threadId: input.threadId, senderId: input.senderId, body: input.body },
     })
@@ -174,4 +181,15 @@ export async function replyToThread(input: {
     })
     return newMessage
   })
+
+  const participants = await prisma.threadParticipant.findMany({
+    where: { threadId: input.threadId },
+    select: { userId: true },
+  })
+  const io = getIo()
+  for (const participant of participants) {
+    io.to(`user:${participant.userId}`).emit('new-message', { threadId: input.threadId })
+  }
+
+  return newMessage
 }

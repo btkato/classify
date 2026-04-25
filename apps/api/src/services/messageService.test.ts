@@ -1,13 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prisma } from '../lib/prisma.js'
+import { getIo } from '../lib/socket.js'
 import { createDirectMessage, getInbox, getThread, replyToThread } from './messageService.js'
 import { ForbiddenError, NotFoundError } from '../lib/errors.js'
+
+const { mockEmit, mockTo } = vi.hoisted(() => {
+  const mockEmit = vi.fn()
+  const mockTo = vi.fn().mockReturnValue({ emit: mockEmit })
+  return { mockEmit, mockTo }
+})
+
+vi.mock('../lib/socket.js', () => ({
+  getIo: vi.fn().mockReturnValue({ to: mockTo }),
+}))
 
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
     userRole: { findFirst: vi.fn() },
     messageThread: { findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() },
-    threadParticipant: { findUnique: vi.fn(), createMany: vi.fn() },
+    threadParticipant: { findUnique: vi.fn(), createMany: vi.fn(), findMany: vi.fn() },
     message: { create: vi.fn(), updateMany: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -21,6 +32,7 @@ const mockMessageThreadUpdate = vi.mocked(prisma.messageThread.update)
 const mockMessageThreadFindMany = vi.mocked(prisma.messageThread.findMany)
 const mockThreadParticipantFindUnique = vi.mocked(prisma.threadParticipant.findUnique)
 const mockThreadParticipantCreateMany = vi.mocked(prisma.threadParticipant.createMany)
+const mockThreadParticipantFindMany = vi.mocked(prisma.threadParticipant.findMany)
 const mockMessageCreate = vi.mocked(prisma.message.create)
 const mockMessageUpdateMany = vi.mocked(prisma.message.updateMany)
 const mockTransaction = vi.mocked(prisma.$transaction)
@@ -50,6 +62,8 @@ const createdMessage = {
 beforeEach(() => {
   vi.resetAllMocks()
   mockTransaction.mockImplementation(async (fn) => fn(prisma as never))
+  vi.mocked(getIo).mockReturnValue({ to: mockTo } as never)
+  mockTo.mockReturnValue({ emit: mockEmit })
 })
 
 describe('createDirectMessage', () => {
@@ -85,6 +99,9 @@ describe('createDirectMessage', () => {
       where: { id: threadId },
       data: { lastMessageAt: createdMessage.sentAt },
     })
+    expect(mockTo).toHaveBeenCalledWith(`user:${adminId}`)
+    expect(mockTo).toHaveBeenCalledWith(`user:${instructorId}`)
+    expect(mockEmit).toHaveBeenCalledWith('new-message', { threadId })
     expect(result).toEqual(createdMessage)
   })
 
@@ -105,6 +122,9 @@ describe('createDirectMessage', () => {
       where: { id: threadId },
       data: { lastMessageAt: createdMessage.sentAt },
     })
+    expect(mockTo).toHaveBeenCalledWith(`user:${adminId}`)
+    expect(mockTo).toHaveBeenCalledWith(`user:${instructorId}`)
+    expect(mockEmit).toHaveBeenCalledWith('new-message', { threadId })
     expect(result).toEqual(createdMessage)
   })
 })
@@ -251,6 +271,10 @@ describe('replyToThread', () => {
     mockThreadParticipantFindUnique.mockResolvedValue({ canReply: true } as never)
     mockMessageCreate.mockResolvedValue(createdMessage as never)
     mockMessageThreadUpdate.mockResolvedValue(createdThread as never)
+    mockThreadParticipantFindMany.mockResolvedValue([
+      { userId: adminId },
+      { userId: instructorId },
+    ] as never)
 
     const result = await replyToThread({ threadId, senderId: adminId, body: 'Hello!' })
 
@@ -261,6 +285,13 @@ describe('replyToThread', () => {
       where: { id: threadId },
       data: { lastMessageAt: createdMessage.sentAt },
     })
+    expect(mockThreadParticipantFindMany).toHaveBeenCalledWith({
+      where: { threadId },
+      select: { userId: true },
+    })
+    expect(mockTo).toHaveBeenCalledWith(`user:${adminId}`)
+    expect(mockTo).toHaveBeenCalledWith(`user:${instructorId}`)
+    expect(mockEmit).toHaveBeenCalledWith('new-message', { threadId })
     expect(result).toEqual(createdMessage)
   })
 })
