@@ -160,6 +160,18 @@ export interface ThreadMessage {
   sentAt: string
 }
 
+export interface MembershipPlan {
+  id: string
+  type: string
+  displayName: string
+  description: string
+  priceInCents: number
+  stripePriceId: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export interface ThreadDetail {
   threadId: string
   type: 'DIRECT' | 'ANNOUNCEMENT'

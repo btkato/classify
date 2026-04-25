@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import MembershipPurchasePage from './MembershipPurchasePage'
 import { apiFetch } from '../lib/api'
+import { useMembershipPlans } from '../hooks/useMembershipPlans'
 
 vi.mock('../lib/api', () => ({
   apiFetch: vi.fn(),
@@ -14,13 +15,25 @@ vi.mock('@clerk/clerk-react', () => ({
   useAuth: vi.fn().mockReturnValue({ getToken: vi.fn().mockResolvedValue('token_123') }),
 }))
 
+vi.mock('../hooks/useMembershipPlans')
+
 const mockApiFetch = vi.mocked(apiFetch)
+const mockUseMembershipPlans = vi.mocked(useMembershipPlans)
 
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return { ...actual, useNavigate: () => mockNavigate }
 })
+
+const mockPlans = [
+  { id: 'plan_1', type: 'DROP_IN', displayName: 'Drop-in', description: 'Single class access. No expiry.', priceInCents: 2000, stripePriceId: null, isActive: true, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+  { id: 'plan_2', type: 'CLASS_PACK_5', displayName: 'Class Pack (5)', description: '5 classes. No expiry.', priceInCents: 8500, stripePriceId: null, isActive: true, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+  { id: 'plan_3', type: 'CLASS_PACK_10', displayName: 'Class Pack (10)', description: '10 classes. No expiry.', priceInCents: 16000, stripePriceId: null, isActive: true, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+  { id: 'plan_4', type: 'MONTHLY', displayName: 'Monthly', description: 'Unlimited classes. 30 days access.', priceInCents: 12000, stripePriceId: null, isActive: true, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+  { id: 'plan_5', type: 'CONTINUOUS_MONTHLY', displayName: 'Continuous Monthly', description: 'Unlimited classes. Auto-renews monthly.', priceInCents: 11000, stripePriceId: null, isActive: true, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+  { id: 'plan_6', type: 'YEARLY', displayName: 'Yearly', description: 'Unlimited classes. 365 days.', priceInCents: 110000, stripePriceId: null, isActive: true, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+]
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -39,9 +52,13 @@ function renderPage() {
 describe('MembershipPurchasePage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseMembershipPlans.mockReturnValue({
+      data: mockPlans,
+      isLoading: false,
+    } as ReturnType<typeof useMembershipPlans>)
   })
 
-  it('renders all 6 membership type options', () => {
+  it('renders all 6 membership plan options from the API', () => {
     renderPage()
 
     expect(screen.getByText('Drop-in')).toBeInTheDocument()
@@ -50,6 +67,24 @@ describe('MembershipPurchasePage', () => {
     expect(screen.getByText('Monthly')).toBeInTheDocument()
     expect(screen.getByText('Continuous Monthly')).toBeInTheDocument()
     expect(screen.getByText('Yearly')).toBeInTheDocument()
+  })
+
+  it('shows skeletons while plans are loading', () => {
+    mockUseMembershipPlans.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as ReturnType<typeof useMembershipPlans>)
+
+    renderPage()
+
+    expect(screen.queryByText('Drop-in')).not.toBeInTheDocument()
+    expect(screen.getAllByTestId('plan-skeleton')).toHaveLength(6)
+  })
+
+  it('formats CONTINUOUS_MONTHLY price with /mo suffix', () => {
+    renderPage()
+
+    expect(screen.getByText('$110/mo')).toBeInTheDocument()
   })
 
   it('renders a back link to /memberships', () => {
