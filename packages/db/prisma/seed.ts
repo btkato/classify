@@ -415,6 +415,98 @@ async function seedRegistrations(standaloneClassIds: string[]) {
   console.log(`  Registrations: 2 enrolled in HIIT Blast`)
 }
 
+async function seedMessages(standaloneClassIds: string[]) {
+  const adminId = 'user_seed_admin_1'
+  const instructorId = 'user_seed_instructor_1'
+  const morningYogaId = standaloneClassIds[0]
+
+  // DIRECT thread: Alice Admin ↔ Carol Coach
+  const directThread = await prisma.messageThread.create({
+    data: { type: 'DIRECT' },
+  })
+  await prisma.threadParticipant.createMany({
+    data: [
+      { threadId: directThread.id, userId: adminId, canReply: true },
+      { threadId: directThread.id, userId: instructorId, canReply: true },
+    ],
+  })
+  const directMessage1 = await prisma.message.create({
+    data: {
+      threadId: directThread.id,
+      senderId: adminId,
+      body: 'Hi Carol, just checking in — how are the Morning Vinyasa enrolments looking?',
+      sentAt: new Date(Date.now() - 60 * 60 * 1000 * 2),
+      readAt: new Date(Date.now() - 60 * 60 * 1000),
+    },
+  })
+  const directMessage2 = await prisma.message.create({
+    data: {
+      threadId: directThread.id,
+      senderId: instructorId,
+      body: 'All good! Four enrolled and one on the waitlist. Happy to take a couple more if you can raise capacity.',
+      sentAt: new Date(Date.now() - 60 * 60 * 1000),
+      readAt: new Date(Date.now() - 30 * 60 * 1000),
+    },
+  })
+  const directMessage3 = await prisma.message.create({
+    data: {
+      threadId: directThread.id,
+      senderId: adminId,
+      body: "I'll bump it to 17 — let me know if you need anything else before the session.",
+      sentAt: new Date(),
+      readAt: null,
+    },
+  })
+  await prisma.messageThread.update({
+    where: { id: directThread.id },
+    data: { lastMessageAt: directMessage3.sentAt },
+  })
+  console.log(`  Direct thread: Alice Admin ↔ Carol Coach (3 messages, 1 unread)`)
+
+  // ANNOUNCEMENT thread: Morning Vinyasa Flow → enrolled students
+  if (morningYogaId) {
+    const announcementThread = await prisma.messageThread.create({
+      data: { type: 'ANNOUNCEMENT', classId: morningYogaId },
+    })
+    await prisma.threadParticipant.createMany({
+      data: [
+        { threadId: announcementThread.id, userId: instructorId, canReply: true },
+        { threadId: announcementThread.id, userId: 'user_seed_student_1', canReply: false },
+        { threadId: announcementThread.id, userId: 'user_seed_student_2', canReply: false },
+        { threadId: announcementThread.id, userId: 'user_seed_student_3', canReply: false },
+        { threadId: announcementThread.id, userId: 'user_seed_student_4', canReply: false },
+      ],
+    })
+    const announcementMessage1 = await prisma.message.create({
+      data: {
+        threadId: announcementThread.id,
+        senderId: instructorId,
+        body: 'Welcome everyone! Please bring a mat and a water bottle. Studio A is on the second floor.',
+        sentAt: new Date(Date.now() - 60 * 60 * 1000 * 24),
+        readAt: new Date(Date.now() - 60 * 60 * 1000 * 12),
+      },
+    })
+    const announcementMessage2 = await prisma.message.create({
+      data: {
+        threadId: announcementThread.id,
+        senderId: instructorId,
+        body: 'Quick reminder — class starts at 7am sharp. See you tomorrow!',
+        sentAt: new Date(),
+        readAt: null,
+      },
+    })
+    await prisma.messageThread.update({
+      where: { id: announcementThread.id },
+      data: { lastMessageAt: announcementMessage2.sentAt },
+    })
+    console.log(`  Announcement thread: Morning Vinyasa Flow (2 messages, 1 unread for students)`)
+    void announcementMessage1
+  }
+
+  void directMessage1
+  void directMessage2
+}
+
 async function seedPromotedUser(
   categoryMap: Map<string, string>,
   promotedClerkId: string
@@ -493,6 +585,60 @@ async function seedPromotedUser(
     console.log(`  Registrations: 3 enrolled + 1 waitlisted in My Morning Yoga`)
   }
 
+  // DIRECT thread: promoted user (as admin) ↔ instructor_2 (Dan Coach)
+  const promotedDirectThread = await prisma.messageThread.create({
+    data: { type: 'DIRECT' },
+  })
+  await prisma.threadParticipant.createMany({
+    data: [
+      { threadId: promotedDirectThread.id, userId: promotedClerkId, canReply: true },
+      { threadId: promotedDirectThread.id, userId: 'user_seed_instructor_2', canReply: true },
+    ],
+  })
+  const promotedMessage1 = await prisma.message.create({
+    data: {
+      threadId: promotedDirectThread.id,
+      senderId: 'user_seed_instructor_2',
+      body: 'Hey, just wanted to flag that the Dance Studio heating is broken. Could we move Latin Dance Cardio to Studio B?',
+      sentAt: new Date(Date.now() - 60 * 60 * 1000 * 3),
+      readAt: null,
+    },
+  })
+  await prisma.messageThread.update({
+    where: { id: promotedDirectThread.id },
+    data: { lastMessageAt: promotedMessage1.sentAt },
+  })
+  console.log(`  Direct thread: You ↔ Dan Coach (1 unread message waiting for you)`)
+
+  // ANNOUNCEMENT thread for "My Morning Yoga" → enrolled students
+  if (myYogaClass) {
+    const promotedAnnouncementThread = await prisma.messageThread.create({
+      data: { type: 'ANNOUNCEMENT', classId: myYogaClass.id },
+    })
+    await prisma.threadParticipant.createMany({
+      data: [
+        { threadId: promotedAnnouncementThread.id, userId: promotedClerkId, canReply: true },
+        { threadId: promotedAnnouncementThread.id, userId: 'user_seed_student_1', canReply: false },
+        { threadId: promotedAnnouncementThread.id, userId: 'user_seed_student_2', canReply: false },
+        { threadId: promotedAnnouncementThread.id, userId: 'user_seed_student_3', canReply: false },
+      ],
+    })
+    const promotedAnnouncement = await prisma.message.create({
+      data: {
+        threadId: promotedAnnouncementThread.id,
+        senderId: promotedClerkId,
+        body: 'Hi everyone — your first class is coming up. Bring a mat, arrive 5 minutes early.',
+        sentAt: new Date(Date.now() - 60 * 60 * 1000),
+        readAt: null,
+      },
+    })
+    await prisma.messageThread.update({
+      where: { id: promotedAnnouncementThread.id },
+      data: { lastMessageAt: promotedAnnouncement.sentAt },
+    })
+    console.log(`  Announcement thread: My Morning Yoga (sent as instructor, 3 student recipients)`)
+  }
+
   console.log(`  Promoted user: ${promotedClerkId} → STUDENT + INSTRUCTOR + ADMIN`)
 }
 
@@ -545,6 +691,9 @@ async function main() {
 
   console.log('\nRegistrations:')
   await seedRegistrations(standaloneClassIds)
+
+  console.log('\nMessages:')
+  await seedMessages(standaloneClassIds)
 
   const promotedClerkId = process.env['PROMOTE_USER_ID']
   if (promotedClerkId) {
