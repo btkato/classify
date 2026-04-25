@@ -124,12 +124,13 @@ describe('getInbox', () => {
     id: 'thread_1',
     type: 'DIRECT' as const,
     classId: null,
+    class: null,
     lastMessageAt: new Date('2026-01-10'),
     createdAt: new Date(),
     updatedAt: new Date(),
     participants: [
-      { userId: adminId, canReply: true },
-      { userId: instructorId, canReply: true },
+      { userId: adminId, canReply: true, user: { firstName: 'Admin', lastName: 'User' } },
+      { userId: instructorId, canReply: true, user: { firstName: 'Jane', lastName: 'Smith' } },
     ],
     messages: [latestMessage],
   }
@@ -152,7 +153,7 @@ describe('getInbox', () => {
     )
   })
 
-  it('maps threads to summaries with latest message', async () => {
+  it('maps threads to summaries with latest message, participant names, and className', async () => {
     mockMessageThreadFindMany.mockResolvedValue([thread1] as never)
 
     const result = await getInbox('user_1')
@@ -160,8 +161,25 @@ describe('getInbox', () => {
     expect(result).toHaveLength(1)
     expect(result[0]?.threadId).toBe('thread_1')
     expect(result[0]?.type).toBe('DIRECT')
-    expect(result[0]?.latestMessage).toMatchObject({ id: 'message_1', body: 'Hello there' })
+    expect(result[0]?.className).toBeNull()
+    expect(result[0]?.latestMessage).toMatchObject({ id: 'message_1', body: 'Hello there', readAt: null })
     expect(result[0]?.participants).toHaveLength(2)
+    expect(result[0]?.participants[0]).toMatchObject({ user: { firstName: 'Admin', lastName: 'User' } })
+    expect(result[0]?.participants[1]).toMatchObject({ user: { firstName: 'Jane', lastName: 'Smith' } })
+  })
+
+  it('returns className from the linked class for ANNOUNCEMENT threads', async () => {
+    const announcementThread = {
+      ...thread1,
+      type: 'ANNOUNCEMENT' as const,
+      classId: 'class_1',
+      class: { title: 'Yoga Flow Advanced' },
+    }
+    mockMessageThreadFindMany.mockResolvedValue([announcementThread] as never)
+
+    const result = await getInbox('user_1')
+
+    expect(result[0]?.className).toBe('Yoga Flow Advanced')
   })
 
   it('returns latestMessage as null when the thread has no messages', async () => {
@@ -181,8 +199,8 @@ describe('getThread', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     participants: [
-      { userId: adminId, canReply: true },
-      { userId: instructorId, canReply: true },
+      { userId: adminId, canReply: true, user: { firstName: 'Admin', lastName: 'User' } },
+      { userId: instructorId, canReply: true, user: { firstName: 'Jane', lastName: 'Smith' } },
     ],
     messages: [createdMessage],
   }
@@ -208,6 +226,7 @@ describe('getThread', () => {
     expect(result.type).toBe('DIRECT')
     expect(result.messages).toHaveLength(1)
     expect(result.participants).toHaveLength(2)
+    expect(result.participants[0]).toMatchObject({ user: { firstName: 'Admin', lastName: 'User' } })
   })
 })
 

@@ -2,16 +2,24 @@ import { prisma } from '../lib/prisma.js'
 import { ForbiddenError, NotFoundError } from '../lib/errors.js'
 import type { Message, ThreadType } from 'db'
 
+interface ParticipantSummary {
+  userId: string
+  canReply: boolean
+  user: { firstName: string; lastName: string }
+}
+
 interface ThreadSummary {
   threadId: string
   type: ThreadType
   classId: string | null
-  participants: Array<{ userId: string; canReply: boolean }>
+  className: string | null
+  participants: ParticipantSummary[]
   latestMessage: {
     id: string
     body: string
     sentAt: Date
     senderId: string
+    readAt: Date | null
   } | null
 }
 
@@ -19,7 +27,7 @@ interface ThreadDetail {
   threadId: string
   type: ThreadType
   classId: string | null
-  participants: Array<{ userId: string; canReply: boolean }>
+  participants: ParticipantSummary[]
   messages: Message[]
 }
 
@@ -81,7 +89,8 @@ export async function getInbox(userId: string): Promise<ThreadSummary[]> {
   const threads = await prisma.messageThread.findMany({
     where: { participants: { some: { userId } } },
     include: {
-      participants: { select: { userId: true, canReply: true } },
+      class: { select: { title: true } },
+      participants: { select: { userId: true, canReply: true, user: { select: { firstName: true, lastName: true } } } },
       messages: { orderBy: { sentAt: 'desc' }, take: 1 },
     },
     orderBy: { lastMessageAt: 'desc' },
@@ -93,6 +102,7 @@ export async function getInbox(userId: string): Promise<ThreadSummary[]> {
       threadId: thread.id,
       type: thread.type,
       classId: thread.classId,
+      className: thread.class?.title ?? null,
       participants: thread.participants,
       latestMessage: latestMessage
         ? {
@@ -100,6 +110,7 @@ export async function getInbox(userId: string): Promise<ThreadSummary[]> {
             body: latestMessage.body,
             sentAt: latestMessage.sentAt,
             senderId: latestMessage.senderId,
+            readAt: latestMessage.readAt,
           }
         : null,
     }
@@ -122,7 +133,7 @@ export async function getThread(userId: string, threadId: string): Promise<Threa
     const foundThread = await transaction.messageThread.findUnique({
       where: { id: threadId },
       include: {
-        participants: { select: { userId: true, canReply: true } },
+        participants: { select: { userId: true, canReply: true, user: { select: { firstName: true, lastName: true } } } },
         messages: { orderBy: { sentAt: 'asc' } },
       },
     })
