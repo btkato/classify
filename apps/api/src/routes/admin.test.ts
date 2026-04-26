@@ -30,12 +30,17 @@ vi.mock('../services/userService.js', () => ({
   getUserById: vi.fn(),
 }))
 
+vi.mock('../services/notificationService.js', () => ({
+  listNotificationJobs: vi.fn(),
+}))
+
 import { app } from '../app.js'
 import { getAuth } from '@clerk/express'
 import { prisma } from '../lib/prisma.js'
 import * as roleService from '../services/roleService.js'
 import * as membershipService from '../services/membershipService.js'
 import * as userService from '../services/userService.js'
+import * as notificationService from '../services/notificationService.js'
 
 const mockGetAuth = vi.mocked(getAuth)
 const mockFindMany = vi.mocked(prisma.userRole.findMany)
@@ -45,6 +50,7 @@ const mockUpdateMembership = vi.mocked(membershipService.updateMembership)
 const mockListAllMemberships = vi.mocked(membershipService.listAllMemberships)
 const mockListUsers = vi.mocked(userService.listUsers)
 const mockGetUserById = vi.mocked(userService.getUserById)
+const mockListNotificationJobs = vi.mocked(notificationService.listNotificationJobs)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -415,6 +421,88 @@ describe('GET /admin/users/:id', () => {
       const res = await request(app).get('/admin/users/nonexistent')
 
       expect(res.status).toBe(404)
+    })
+  })
+})
+
+describe('GET /admin/notification-jobs', () => {
+  const jobPage = {
+    data: [
+      {
+        id: 'job_1',
+        userId: 'student_1',
+        triggerId: 'trigger_1',
+        status: 'SENT',
+        triggerAt: new Date().toISOString(),
+        sentAt: new Date().toISOString(),
+        trigger: { name: 'Expiring soon' },
+        user: { firstName: 'Frank', lastName: 'Student', email: 'frank@example.com' },
+      },
+    ],
+    total: 1,
+    page: 1,
+    totalPages: 1,
+  }
+
+  beforeEach(() => {
+    mockListNotificationJobs.mockResolvedValue(jobPage as never)
+  })
+
+  describe('authentication and authorisation', () => {
+    it('returns 401 when not authenticated', async () => {
+      mockGetAuth.mockReturnValue({ userId: null } as never)
+
+      const res = await request(app).get('/admin/notification-jobs')
+
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 403 when authenticated as STUDENT', async () => {
+      mockFindMany.mockResolvedValue([{ role: 'STUDENT' }] as never)
+
+      const res = await request(app).get('/admin/notification-jobs')
+
+      expect(res.status).toBe(403)
+    })
+  })
+
+  describe('success', () => {
+    it('returns 200 with paginated job list', async () => {
+      const res = await request(app).get('/admin/notification-jobs')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toMatchObject({ total: 1, page: 1, totalPages: 1 })
+      expect(res.body.data).toHaveLength(1)
+    })
+
+    it('passes page and pageSize to listNotificationJobs', async () => {
+      await request(app).get('/admin/notification-jobs?page=2&pageSize=10')
+
+      expect(mockListNotificationJobs).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 2, pageSize: 10 })
+      )
+    })
+
+    it('passes status filter to listNotificationJobs', async () => {
+      await request(app).get('/admin/notification-jobs?status=PENDING')
+
+      expect(mockListNotificationJobs).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'PENDING' })
+      )
+    })
+
+    it('passes triggerId filter to listNotificationJobs', async () => {
+      await request(app).get('/admin/notification-jobs?triggerId=trigger_1')
+
+      expect(mockListNotificationJobs).toHaveBeenCalledWith(
+        expect.objectContaining({ triggerId: 'trigger_1' })
+      )
+    })
+
+    it('returns 400 when status is not a valid enum value', async () => {
+      const res = await request(app).get('/admin/notification-jobs?status=INVALID')
+
+      expect(res.status).toBe(400)
     })
   })
 })

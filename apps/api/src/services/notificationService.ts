@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.js'
 import { getIo } from '../lib/socket.js'
-import type { Prisma } from 'db'
+import type { Prisma, NotificationStatus } from 'db'
 
 type NotificationJobWithRelations = Prisma.NotificationJobGetPayload<{
   include: { trigger: true; user: true; membership: true }
@@ -102,4 +102,45 @@ async function processOneJob(job: NotificationJobWithRelations): Promise<void> {
     io.to(`user:${result.senderId}`).emit('new-message', { threadId: result.threadId })
     io.to(`user:${job.userId}`).emit('new-message', { threadId: result.threadId })
   }
+}
+
+type NotificationJobSummary = Prisma.NotificationJobGetPayload<{
+  include: {
+    trigger: { select: { name: true } }
+    user: { select: { firstName: true; lastName: true; email: true } }
+  }
+}>
+
+interface ListNotificationJobsOptions {
+  page: number
+  pageSize: number
+  status?: NotificationStatus
+  triggerId?: string
+}
+
+export async function listNotificationJobs(options: ListNotificationJobsOptions): Promise<{
+  data: NotificationJobSummary[]
+  total: number
+  page: number
+  totalPages: number
+}> {
+  const { page, pageSize, status, triggerId } = options
+  const skip = (page - 1) * pageSize
+  const where = { status, triggerId }
+
+  const [total, data] = await Promise.all([
+    prisma.notificationJob.count({ where }),
+    prisma.notificationJob.findMany({
+      where,
+      include: {
+        trigger: { select: { name: true } },
+        user: { select: { firstName: true, lastName: true, email: true } },
+      },
+      orderBy: { triggerAt: 'desc' },
+      skip,
+      take: pageSize,
+    }),
+  ])
+
+  return { data, total, page, totalPages: Math.ceil(total / pageSize) }
 }
