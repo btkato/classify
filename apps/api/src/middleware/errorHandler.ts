@@ -48,6 +48,10 @@ export function errorHandler(
       res.status(409).json({ error: { message: 'A record with that value already exists' } })
       return
     }
+    if (err.code === 'P2003') {
+      res.status(409).json({ error: { message: 'Cannot delete: other records depend on this one' } })
+      return
+    }
   }
 
   if (err instanceof Error) {
