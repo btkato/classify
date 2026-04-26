@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prisma } from '../lib/prisma.js'
-import { interpolateTemplate, processNotificationJobs } from './notificationService.js'
+import { interpolateTemplate, processNotificationJobs, listNotificationJobs } from './notificationService.js'
 
 const { mockEmit, mockTo } = vi.hoisted(() => {
   const mockEmit = vi.fn()
@@ -18,6 +18,7 @@ vi.mock('../lib/prisma.js', () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
+      count: vi.fn(),
     },
     messageThread: {
       findFirst: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock('../lib/prisma.js', () => ({
   },
 }))
 
+const mockJobCount = vi.mocked(prisma.notificationJob.count)
 const mockJobFindMany = vi.mocked(prisma.notificationJob.findMany)
 const mockJobFindUnique = vi.mocked(prisma.notificationJob.findUnique)
 const mockJobUpdate = vi.mocked(prisma.notificationJob.update)
@@ -78,6 +80,7 @@ beforeEach(() => {
   mockMessageCreate.mockResolvedValue({ id: 'msg_1', sentAt: new Date() } as never)
   mockThreadUpdate.mockResolvedValue({} as never)
   mockJobUpdate.mockResolvedValue({} as never)
+  mockJobCount.mockResolvedValue(0)
 })
 
 describe('interpolateTemplate', () => {
@@ -183,5 +186,63 @@ describe('processNotificationJobs', () => {
       data: { status: 'FAILED' },
     })
     expect(mockMessageCreate).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('listNotificationJobs', () => {
+  const jobSummary = {
+    id: 'job_1',
+    userId: 'student_1',
+    membershipId: 'mem_1',
+    triggerId: 'trigger_1',
+    status: 'SENT' as const,
+    triggerAt: new Date(),
+    sentAt: new Date(),
+    createdAt: new Date(),
+    trigger: { name: 'Expiring soon' },
+    user: { firstName: 'Frank', lastName: 'Student', email: 'frank@example.com' },
+  }
+
+  it('returns paginated jobs with user and trigger includes', async () => {
+    mockJobCount.mockResolvedValue(1)
+    mockJobFindMany.mockResolvedValue([jobSummary] as never)
+
+    const result = await listNotificationJobs({ page: 1, pageSize: 20 })
+
+    expect(result).toEqual({ data: [jobSummary], total: 1, page: 1, totalPages: 1 })
+    expect(mockJobCount).toHaveBeenCalledWith({ where: { status: undefined, triggerId: undefined } })
+    expect(mockJobFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: undefined, triggerId: undefined },
+        orderBy: { triggerAt: 'desc' },
+        skip: 0,
+        take: 20,
+      })
+    )
+  })
+
+  it('calculates totalPages correctly', async () => {
+    mockJobCount.mockResolvedValue(45)
+    mockJobFindMany.mockResolvedValue([jobSummary] as never)
+
+    const result = await listNotificationJobs({ page: 3, pageSize: 20 })
+
+    expect(result.totalPages).toBe(3)
+    expect(result.page).toBe(3)
+    expect(mockJobFindMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 40, take: 20 }))
+  })
+
+  it('passes status and triggerId filters through to Prisma', async () => {
+    mockJobCount.mockResolvedValue(0)
+    mockJobFindMany.mockResolvedValue([])
+
+    await listNotificationJobs({ page: 1, pageSize: 20, status: 'PENDING', triggerId: 'trigger_1' })
+
+    expect(mockJobCount).toHaveBeenCalledWith({
+      where: { status: 'PENDING', triggerId: 'trigger_1' },
+    })
+    expect(mockJobFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { status: 'PENDING', triggerId: 'trigger_1' } })
+    )
   })
 })
