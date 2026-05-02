@@ -181,6 +181,11 @@ export interface ThreadDetail {
   messages: ThreadMessage[]
 }
 
+export interface TriggerEventConfig {
+  event: string
+  displayName: string
+}
+
 export interface NotificationTrigger {
   id: string
   createdByUserId: string
