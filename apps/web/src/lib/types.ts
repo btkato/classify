@@ -180,3 +180,35 @@ export interface ThreadDetail {
   participants: MessageParticipant[]
   messages: ThreadMessage[]
 }
+
+export interface NotificationTrigger {
+  id: string
+  createdByUserId: string
+  name: string
+  triggerEvent: string
+  offsetDays: number
+  messageTemplate: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NotificationJobSummary {
+  id: string
+  userId: string
+  membershipId: string | null
+  triggerId: string
+  status: string
+  triggerAt: string
+  sentAt: string | null
+  createdAt: string
+  trigger: { name: string }
+  user: { firstName: string; lastName: string; email: string }
+}
+
+export interface NotificationJobPage {
+  data: NotificationJobSummary[]
+  total: number
+  page: number
+  totalPages: number
+}
