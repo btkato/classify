@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useNotificationTriggers } from '../hooks/useNotificationTriggers'
 import { useCreateNotificationTrigger } from '../hooks/useCreateNotificationTrigger'
 import { useUpdateNotificationTrigger } from '../hooks/useUpdateNotificationTrigger'
 import { useDeleteNotificationTrigger } from '../hooks/useDeleteNotificationTrigger'
+import { useTriggerEventConfigs } from '../hooks/useTriggerEventConfigs'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
@@ -35,19 +36,6 @@ import {
 } from '../components/ui/table'
 import type { NotificationTrigger } from '../lib/types'
 
-const TRIGGER_EVENT_OPTIONS = [
-  { value: 'AFTER_PURCHASE', label: 'After purchase' },
-  { value: 'MEMBERSHIP_EXPIRING', label: 'Membership expiring' },
-  { value: 'MEMBERSHIP_EXPIRED', label: 'Membership expired' },
-  { value: 'MEMBERSHIP_EXHAUSTED', label: 'Membership exhausted' },
-  { value: 'AFTER_CLASS_ATTENDED', label: 'After class attended' },
-  { value: 'CLASS_COUNT_REACHED', label: 'Class count reached' },
-  { value: 'DAYS_INACTIVE', label: 'Days inactive' },
-] as const
-
-function formatTriggerEvent(value: string): string {
-  return TRIGGER_EVENT_OPTIONS.find((option) => option.value === value)?.label ?? value
-}
 
 type DialogState =
   | { type: 'closed' }
@@ -57,9 +45,16 @@ type DialogState =
 
 export default function AdminNotificationsPage() {
   const { data: triggers, isLoading } = useNotificationTriggers()
+  const { data: eventConfigs } = useTriggerEventConfigs()
   const createTrigger = useCreateNotificationTrigger()
   const updateTrigger = useUpdateNotificationTrigger()
   const deleteTrigger = useDeleteNotificationTrigger()
+
+  const eventConfigMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    eventConfigs?.forEach((config) => { map[config.event] = config.displayName })
+    return map
+  }, [eventConfigs])
 
   const [dialog, setDialog] = useState<DialogState>({ type: 'closed' })
 
@@ -173,7 +168,7 @@ export default function AdminNotificationsPage() {
                 <TableRow key={trigger.id}>
                   <TableCell className="font-medium">{trigger.name}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatTriggerEvent(trigger.triggerEvent)}
+                    {eventConfigMap[trigger.triggerEvent] ?? trigger.triggerEvent}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{trigger.offsetDays}</TableCell>
                   <TableCell>
@@ -249,9 +244,9 @@ export default function AdminNotificationsPage() {
                   <SelectValue placeholder="Select an event…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TRIGGER_EVENT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                  {eventConfigs?.map((config) => (
+                    <SelectItem key={config.event} value={config.event}>
+                      {config.displayName}
                     </SelectItem>
                   ))}
                 </SelectContent>

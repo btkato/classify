@@ -17,16 +17,21 @@ vi.mock('../hooks/useUpdateNotificationTrigger', () => ({
 vi.mock('../hooks/useDeleteNotificationTrigger', () => ({
   useDeleteNotificationTrigger: vi.fn(),
 }))
+vi.mock('../hooks/useTriggerEventConfigs', () => ({
+  useTriggerEventConfigs: vi.fn(),
+}))
 
 import { useNotificationTriggers } from '../hooks/useNotificationTriggers'
 import { useCreateNotificationTrigger } from '../hooks/useCreateNotificationTrigger'
 import { useUpdateNotificationTrigger } from '../hooks/useUpdateNotificationTrigger'
 import { useDeleteNotificationTrigger } from '../hooks/useDeleteNotificationTrigger'
+import { useTriggerEventConfigs } from '../hooks/useTriggerEventConfigs'
 
 const mockUseNotificationTriggers = vi.mocked(useNotificationTriggers)
 const mockUseCreateNotificationTrigger = vi.mocked(useCreateNotificationTrigger)
 const mockUseUpdateNotificationTrigger = vi.mocked(useUpdateNotificationTrigger)
 const mockUseDeleteNotificationTrigger = vi.mocked(useDeleteNotificationTrigger)
+const mockUseTriggerEventConfigs = vi.mocked(useTriggerEventConfigs)
 
 const triggers = [
   {
@@ -78,6 +83,20 @@ describe('AdminNotificationsPage', () => {
     mockUseCreateNotificationTrigger.mockReturnValue({ mutate: mockCreateMutate, isPending: false } as never)
     mockUseUpdateNotificationTrigger.mockReturnValue({ mutate: mockUpdateMutate, isPending: false } as never)
     mockUseDeleteNotificationTrigger.mockReturnValue({ mutate: mockDeleteMutate, isPending: false } as never)
+    mockUseTriggerEventConfigs.mockReturnValue({
+      data: [
+        { event: 'AFTER_PURCHASE', displayName: 'After purchase' },
+        { event: 'MEMBERSHIP_EXPIRING', displayName: 'Membership expiring' },
+        { event: 'MEMBERSHIP_EXPIRED', displayName: 'Membership expired' },
+        { event: 'MEMBERSHIP_EXHAUSTED', displayName: 'Membership exhausted' },
+        { event: 'AFTER_CLASS_ATTENDED', displayName: 'After class attended' },
+        { event: 'CLASS_COUNT_REACHED', displayName: 'Class count reached' },
+        { event: 'DAYS_INACTIVE', displayName: 'Days inactive' },
+        { event: 'STUDENT_LESSON_COUNT_REACHED', displayName: 'Student lesson count reached' },
+        { event: 'CLASS_SERIES_NEARING_END', displayName: 'Class series nearing end' },
+        { event: 'CLASS_SERIES_COMPLETE', displayName: 'Class series complete' },
+      ],
+    } as never)
   })
 
   it('shows a skeleton while loading', () => {
