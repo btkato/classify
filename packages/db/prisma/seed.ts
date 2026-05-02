@@ -435,6 +435,30 @@ async function seedRegistrations(standaloneClassIds: string[]) {
   console.log(`  Registrations: 2 enrolled in HIIT Blast`)
 }
 
+async function seedTriggerEventConfigs() {
+  const configs = [
+    { event: 'AFTER_PURCHASE' as const, displayName: 'After purchase' },
+    { event: 'MEMBERSHIP_EXPIRING' as const, displayName: 'Membership expiring' },
+    { event: 'MEMBERSHIP_EXPIRED' as const, displayName: 'Membership expired' },
+    { event: 'MEMBERSHIP_EXHAUSTED' as const, displayName: 'Membership exhausted' },
+    { event: 'AFTER_CLASS_ATTENDED' as const, displayName: 'After class attended' },
+    { event: 'CLASS_COUNT_REACHED' as const, displayName: 'Class count reached' },
+    { event: 'DAYS_INACTIVE' as const, displayName: 'Days inactive' },
+    { event: 'STUDENT_LESSON_COUNT_REACHED' as const, displayName: 'Student lesson count reached' },
+    { event: 'CLASS_SERIES_NEARING_END' as const, displayName: 'Class series nearing end' },
+    { event: 'CLASS_SERIES_COMPLETE' as const, displayName: 'Class series complete' },
+  ]
+
+  for (const config of configs) {
+    await prisma.triggerEventConfig.upsert({
+      where: { event: config.event },
+      create: config,
+      update: { displayName: config.displayName },
+    })
+    console.log(`  ${config.event} → "${config.displayName}"`)
+  }
+}
+
 async function seedNotificationTriggers(): Promise<Record<string, string>> {
   const adminId = 'user_seed_admin_1'
 
@@ -779,6 +803,9 @@ async function main() {
 
   console.log('\nMemberships:')
   await seedMemberships()
+
+  console.log('\nTrigger Event Configs:')
+  await seedTriggerEventConfigs()
 
   console.log('\nNotification Triggers:')
   const triggerIds = await seedNotificationTriggers()
