@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma.js'
 import { NotFoundError, ValidationError } from '../lib/errors.js'
 import { getValidMembership } from './membershipService.js'
-import type { LessonSet, EnrollmentType, ClassStatus, Registration, Prisma } from 'db'
+import type { LessonSet, EnrollmentType, ClassStatus, Registration, TriggerEvent, Prisma } from 'db'
 
 interface SessionOverride {
   sessionNumber: number
@@ -36,6 +36,8 @@ export type LessonSetWithClasses = Prisma.LessonSetGetPayload<{
 }>
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
+
+const SERIES_TRIGGER_EVENTS: TriggerEvent[] = ['CLASS_SERIES_NEARING_END', 'CLASS_SERIES_COMPLETE']
 
 export async function createLessonSet(input: CreateLessonSetInput): Promise<LessonSet> {
   return prisma.$transaction(async (transaction) => {
@@ -214,6 +216,27 @@ export async function enrollInLessonSet(
             balanceAfter: membership.classesRemaining - (index + 1),
           },
         })
+      }
+    }
+
+    const seriesTriggers = await transaction.notificationTrigger.findMany({
+      where: { isActive: true, triggerEvent: { in: SERIES_TRIGGER_EVENTS } },
+    })
+
+    if (allHaveSpace && seriesTriggers.length > 0) {
+      const lastSession = lessonSet.classes.at(-1)
+      if (lastSession) {
+        const lastSessionMs = lastSession.startsAt.getTime()
+        const seriesJobs = seriesTriggers.map((trigger) => ({
+          userId,
+          membershipId: membership.id,
+          triggerId: trigger.id,
+          triggerAt:
+            trigger.triggerEvent === 'CLASS_SERIES_NEARING_END'
+              ? new Date(lastSessionMs - trigger.offsetDays * MS_PER_DAY)
+              : new Date(lastSessionMs + trigger.offsetDays * MS_PER_DAY),
+        }))
+        await transaction.notificationJob.createMany({ data: seriesJobs })
       }
     }
 
