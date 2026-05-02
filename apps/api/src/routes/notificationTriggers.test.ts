@@ -20,6 +20,7 @@ vi.mock('../services/notificationTriggerService.js', () => ({
   createNotificationTrigger: vi.fn(),
   updateNotificationTrigger: vi.fn(),
   deleteNotificationTrigger: vi.fn(),
+  listTriggerEventConfigs: vi.fn(),
 }))
 
 import { app } from '../app.js'
@@ -33,6 +34,7 @@ const mockList = vi.mocked(notificationTriggerService.listNotificationTriggers)
 const mockCreate = vi.mocked(notificationTriggerService.createNotificationTrigger)
 const mockUpdate = vi.mocked(notificationTriggerService.updateNotificationTrigger)
 const mockDelete = vi.mocked(notificationTriggerService.deleteNotificationTrigger)
+const mockListConfigs = vi.mocked(notificationTriggerService.listTriggerEventConfigs)
 
 const adminAuth = { userId: 'admin_1' }
 
@@ -244,5 +246,38 @@ describe('DELETE /notification-triggers/:id', () => {
     expect(res.status).toBe(204)
     expect(res.body).toEqual({})
     expect(mockDelete).toHaveBeenCalledWith('trigger_1')
+  })
+})
+
+describe('GET /notification-triggers/events', () => {
+  it('returns 401 when not authenticated', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+
+    const res = await request(app).get('/notification-triggers/events')
+
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 when authenticated as STUDENT', async () => {
+    mockFindMany.mockResolvedValue([{ role: 'STUDENT' }] as never)
+
+    const res = await request(app).get('/notification-triggers/events')
+
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 200 with all trigger event configs', async () => {
+    mockListConfigs.mockResolvedValue([
+      { event: 'AFTER_PURCHASE', displayName: 'After purchase' },
+      { event: 'MEMBERSHIP_EXPIRING', displayName: 'Membership expiring' },
+    ] as never)
+
+    const res = await request(app).get('/notification-triggers/events')
+
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveLength(2)
+    expect(res.body[0].event).toBe('AFTER_PURCHASE')
+    expect(res.body[0].displayName).toBe('After purchase')
+    expect(mockListConfigs).toHaveBeenCalledOnce()
   })
 })
