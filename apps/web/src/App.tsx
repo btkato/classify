@@ -38,6 +38,8 @@ const AdminClassEditPage = lazy(() => import('./pages/AdminClassEditPage'))
 const AdminLessonSetListPage = lazy(() => import('./pages/AdminLessonSetListPage'))
 const AdminLessonSetFormPage = lazy(() => import('./pages/AdminLessonSetFormPage'))
 const AdminLessonSetEditPage = lazy(() => import('./pages/AdminLessonSetEditPage'))
+const AdminNotificationsPage = lazy(() => import('./pages/AdminNotificationsPage'))
+const AdminNotificationJobsPage = lazy(() => import('./pages/AdminNotificationJobsPage'))
 const InboxPage = lazy(() => import('./pages/InboxPage'))
 const ThreadPage = lazy(() => import('./pages/ThreadPage'))
 const AdminComposePage = lazy(() => import('./pages/AdminComposePage'))
@@ -241,6 +243,27 @@ export default function App() {
               <ProtectedRoute>
                 <RoleProtectedRoute role="ADMIN">
                   <AdminLessonSetEditPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/notifications"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminNotificationsPage />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notification-jobs"
+            element={
+              <ProtectedRoute>
+                <RoleProtectedRoute role="ADMIN">
+                  <AdminNotificationJobsPage />
                 </RoleProtectedRoute>
               </ProtectedRoute>
             }
