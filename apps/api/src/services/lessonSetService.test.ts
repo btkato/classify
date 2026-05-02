@@ -38,6 +38,12 @@ vi.mock('../lib/prisma.js', () => ({
     membershipTransaction: {
       create: vi.fn(),
     },
+    notificationTrigger: {
+      findMany: vi.fn(),
+    },
+    notificationJob: {
+      createMany: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }))
@@ -58,6 +64,8 @@ const mockRegistrationUpdateMany = vi.mocked(prisma.registration.updateMany)
 const mockMembershipFindMany = vi.mocked(prisma.membership.findMany)
 const mockMembershipUpdate = vi.mocked(prisma.membership.update)
 const mockMembershipTransactionCreate = vi.mocked(prisma.membershipTransaction.create)
+const mockNotificationTriggerFindMany = vi.mocked(prisma.notificationTrigger.findMany)
+const mockNotificationJobCreateMany = vi.mocked(prisma.notificationJob.createMany)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -617,6 +625,7 @@ describe('enrollInLessonSet', () => {
       ] as never)
       mockRegistrationCreate.mockResolvedValueOnce({ id: 'reg_1', classId: 'cls_1', status: 'ENROLLED' } as never)
       mockRegistrationCreate.mockResolvedValueOnce({ id: 'reg_2', classId: 'cls_2', status: 'ENROLLED' } as never)
+      mockNotificationTriggerFindMany.mockResolvedValue([])
     })
 
     it('creates an ENROLLED registration for each session', async () => {
@@ -674,6 +683,7 @@ describe('enrollInLessonSet', () => {
       mockRegistrationCreate
         .mockResolvedValueOnce({ id: 'reg_1', classId: 'cls_1', status: 'WAITLISTED', waitlistPosition: 1 } as never)
         .mockResolvedValueOnce({ id: 'reg_2', classId: 'cls_2', status: 'WAITLISTED', waitlistPosition: 1 } as never)
+      mockNotificationTriggerFindMany.mockResolvedValue([])
     })
 
     it('creates WAITLISTED registrations for all sessions', async () => {
@@ -690,6 +700,64 @@ describe('enrollInLessonSet', () => {
 
       expect(mockMembershipUpdate).not.toHaveBeenCalled()
       expect(mockMembershipTransactionCreate).not.toHaveBeenCalled()
+    })
+
+    it('does not create series notification jobs when student is waitlisted', async () => {
+      mockNotificationTriggerFindMany.mockResolvedValue([
+        { id: 'trig_1', triggerEvent: 'CLASS_SERIES_NEARING_END', offsetDays: 3, isActive: true },
+        { id: 'trig_2', triggerEvent: 'CLASS_SERIES_COMPLETE', offsetDays: 1, isActive: true },
+      ] as never)
+
+      await enrollInLessonSet('ls_1', 'user_1')
+
+      expect(mockNotificationJobCreateMany).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('series notification jobs', () => {
+    const nearingEndTrigger = { id: 'trig_1', triggerEvent: 'CLASS_SERIES_NEARING_END', offsetDays: 3, isActive: true }
+    const completeTrigger = { id: 'trig_2', triggerEvent: 'CLASS_SERIES_COMPLETE', offsetDays: 1, isActive: true }
+
+    beforeEach(() => {
+      mockLessonSetFindUnique.mockResolvedValue(fullSetWithSessions as never)
+      mockMembershipFindMany.mockResolvedValue([timeMembership] as never)
+      mockRegistrationGroupBy.mockResolvedValue([
+        { classId: 'cls_1', _count: { _all: 5 } },
+        { classId: 'cls_2', _count: { _all: 5 } },
+      ] as never)
+      mockRegistrationCreate.mockResolvedValueOnce({ id: 'reg_1', classId: 'cls_1', status: 'ENROLLED' } as never)
+      mockRegistrationCreate.mockResolvedValueOnce({ id: 'reg_2', classId: 'cls_2', status: 'ENROLLED' } as never)
+      mockNotificationTriggerFindMany.mockResolvedValue([nearingEndTrigger, completeTrigger] as never)
+    })
+
+    it('creates a CLASS_SERIES_NEARING_END job with triggerAt before the last session', async () => {
+      await enrollInLessonSet('ls_1', 'user_1')
+
+      const expectedTriggerAt = new Date(session2StartsAt.getTime() - 3 * msPerDay)
+      expect(mockNotificationJobCreateMany).toHaveBeenNthCalledWith(1, {
+        data: expect.arrayContaining([
+          expect.objectContaining({ triggerId: 'trig_1', triggerAt: expectedTriggerAt }),
+        ]),
+      })
+    })
+
+    it('creates a CLASS_SERIES_COMPLETE job with triggerAt after the last session', async () => {
+      await enrollInLessonSet('ls_1', 'user_1')
+
+      const expectedTriggerAt = new Date(session2StartsAt.getTime() + 1 * msPerDay)
+      expect(mockNotificationJobCreateMany).toHaveBeenNthCalledWith(1, {
+        data: expect.arrayContaining([
+          expect.objectContaining({ triggerId: 'trig_2', triggerAt: expectedTriggerAt }),
+        ]),
+      })
+    })
+
+    it('does not call notificationJob.createMany when no series triggers are active', async () => {
+      mockNotificationTriggerFindMany.mockResolvedValue([])
+
+      await enrollInLessonSet('ls_1', 'user_1')
+
+      expect(mockNotificationJobCreateMany).not.toHaveBeenCalled()
     })
   })
 })
