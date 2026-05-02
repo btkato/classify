@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma.js'
-import type { NotificationTrigger, TriggerEvent } from 'db'
+import type { NotificationTrigger, TriggerEventConfig, TriggerEvent } from 'db'
 
 interface CreateTriggerInput {
   createdByUserId: string
@@ -32,4 +32,8 @@ export async function updateNotificationTrigger(id: string, input: UpdateTrigger
 
 export async function deleteNotificationTrigger(id: string): Promise<NotificationTrigger> {
   return prisma.notificationTrigger.delete({ where: { id } })
+}
+
+export async function listTriggerEventConfigs(): Promise<TriggerEventConfig[]> {
+  return prisma.triggerEventConfig.findMany()
 }

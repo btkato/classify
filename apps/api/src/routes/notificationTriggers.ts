@@ -9,6 +9,7 @@ import {
   createNotificationTrigger,
   updateNotificationTrigger,
   deleteNotificationTrigger,
+  listTriggerEventConfigs,
 } from '../services/notificationTriggerService.js'
 
 export const notificationTriggersRouter = express.Router()
@@ -34,6 +35,16 @@ const updateTriggerBodySchema = z
   .refine((data) => Object.values(data).some((value) => value !== undefined), {
     message: 'At least one field must be provided',
   })
+
+notificationTriggersRouter.get(
+  '/events',
+  requireAuth,
+  requireRoles(['ADMIN']),
+  asyncHandler(async (_req, res) => {
+    const configs = await listTriggerEventConfigs()
+    res.status(200).json(configs)
+  })
+)
 
 notificationTriggersRouter.get(
   '/',
