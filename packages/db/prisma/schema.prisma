@@ -295,6 +295,7 @@ model NotificationTrigger {
   name            String
   triggerEvent    TriggerEvent
   offsetDays      Int
+  threshold       Int?
   messageTemplate String
   isActive        Boolean      @default(true)
   createdAt       DateTime     @default(now())
