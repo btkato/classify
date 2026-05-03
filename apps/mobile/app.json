@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Classify",
+    "slug": "classify",
+    "scheme": "classify",
+    "version": "1.0.0",
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
