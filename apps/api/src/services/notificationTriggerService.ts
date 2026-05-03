@@ -6,6 +6,7 @@ interface CreateTriggerInput {
   name: string
   triggerEvent: TriggerEvent
   offsetDays: number
+  threshold?: number | null
   messageTemplate: string
   isActive?: boolean
 }
@@ -14,6 +15,7 @@ interface UpdateTriggerInput {
   name?: string
   triggerEvent?: TriggerEvent
   offsetDays?: number
+  threshold?: number | null
   messageTemplate?: string
   isActive?: boolean
 }
