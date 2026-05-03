@@ -11,16 +11,25 @@ vi.mock('@clerk/express', () => ({
 vi.mock('../services/registrationService.js')
 vi.mock('../services/lessonSetService.js')
 
+vi.mock('../lib/prisma.js', () => ({
+  prisma: {
+    userRole: { findMany: vi.fn() },
+  },
+}))
+
 import { app } from '../app.js'
 import { getAuth } from '@clerk/express'
+import { prisma } from '../lib/prisma.js'
 import * as registrationService from '../services/registrationService.js'
 import * as lessonSetService from '../services/lessonSetService.js'
 
 const mockGetAuth = vi.mocked(getAuth)
+const mockUserRoleFindMany = vi.mocked(prisma.userRole.findMany)
 
 const mockEnrollStudent = vi.mocked(registrationService.enrollStudent)
 const mockCancelRegistration = vi.mocked(registrationService.cancelRegistration)
 const mockListRegistrations = vi.mocked(registrationService.listRegistrations)
+const mockMarkAttended = vi.mocked(registrationService.markAttended)
 const mockEnrollInLessonSet = vi.mocked(lessonSetService.enrollInLessonSet)
 const mockCancelLessonSetRegistration = vi.mocked(lessonSetService.cancelLessonSetRegistration)
 
@@ -38,6 +47,7 @@ const baseRegistration = {
 beforeEach(() => {
   vi.clearAllMocks()
   mockGetAuth.mockReturnValue({ userId: 'user_1' } as never)
+  mockUserRoleFindMany.mockResolvedValue([{ role: 'ADMIN' }] as never)
 })
 
 describe('POST /registrations', () => {
@@ -251,5 +261,62 @@ describe('GET /registrations', () => {
     await request(app).get('/registrations').set('Authorization', 'Bearer token')
 
     expect(mockListRegistrations).toHaveBeenCalledWith('user_1')
+  })
+})
+
+describe('PATCH /registrations/:id/attended', () => {
+  const attendedRegistration = {
+    ...baseRegistration,
+    status: 'ATTENDED',
+  }
+
+  it('returns 401 when not authenticated', async () => {
+    mockGetAuth.mockReturnValue({ userId: null } as never)
+
+    const response = await request(app).patch('/registrations/reg_1/attended')
+
+    expect(response.status).toBe(401)
+  })
+
+  it('returns 403 when authenticated as STUDENT', async () => {
+    mockUserRoleFindMany.mockResolvedValue([{ role: 'STUDENT' }] as never)
+
+    const response = await request(app)
+      .patch('/registrations/reg_1/attended')
+      .set('Authorization', 'Bearer token')
+
+    expect(response.status).toBe(403)
+  })
+
+  it('returns 200 with the attended registration', async () => {
+    mockMarkAttended.mockResolvedValue(attendedRegistration as never)
+
+    const response = await request(app)
+      .patch('/registrations/reg_1/attended')
+      .set('Authorization', 'Bearer token')
+
+    expect(response.status).toBe(200)
+    expect(response.body).toMatchObject({ id: 'reg_1', status: 'ATTENDED' })
+  })
+
+  it('calls markAttended with registrationId, requesterId, and isAdmin true for ADMIN', async () => {
+    mockMarkAttended.mockResolvedValue(attendedRegistration as never)
+
+    await request(app)
+      .patch('/registrations/reg_1/attended')
+      .set('Authorization', 'Bearer token')
+
+    expect(mockMarkAttended).toHaveBeenCalledWith('reg_1', 'user_1', true)
+  })
+
+  it('calls markAttended with isAdmin false for INSTRUCTOR', async () => {
+    mockUserRoleFindMany.mockResolvedValue([{ role: 'INSTRUCTOR' }] as never)
+    mockMarkAttended.mockResolvedValue(attendedRegistration as never)
+
+    await request(app)
+      .patch('/registrations/reg_1/attended')
+      .set('Authorization', 'Bearer token')
+
+    expect(mockMarkAttended).toHaveBeenCalledWith('reg_1', 'user_1', false)
   })
 })
