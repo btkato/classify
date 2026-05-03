@@ -137,6 +137,27 @@ describe('POST /notification-triggers', () => {
       createdByUserId: adminAuth.userId,
     })
   })
+
+  it('passes threshold to createNotificationTrigger when provided', async () => {
+    mockCreate.mockResolvedValue({ ...baseTrigger, triggerEvent: 'STUDENT_LESSON_COUNT_REACHED', threshold: 10 } as never)
+
+    const res = await request(app)
+      .post('/notification-triggers')
+      .send({ ...validBody, triggerEvent: 'STUDENT_LESSON_COUNT_REACHED', threshold: 10 })
+
+    expect(res.status).toBe(201)
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ threshold: 10, createdByUserId: adminAuth.userId })
+    )
+  })
+
+  it('returns 400 when threshold is not a positive integer', async () => {
+    const res = await request(app)
+      .post('/notification-triggers')
+      .send({ ...validBody, triggerEvent: 'STUDENT_LESSON_COUNT_REACHED', threshold: 0 })
+
+    expect(res.status).toBe(400)
+  })
 })
 
 describe('PATCH /notification-triggers/:id', () => {
@@ -197,6 +218,30 @@ describe('PATCH /notification-triggers/:id', () => {
     expect(res.status).toBe(200)
     expect(res.body.isActive).toBe(false)
     expect(mockUpdate).toHaveBeenCalledWith('trigger_1', { isActive: false })
+  })
+
+  it('passes threshold to updateNotificationTrigger when provided', async () => {
+    const updated = { ...baseTrigger, triggerEvent: 'STUDENT_LESSON_COUNT_REACHED', threshold: 5 }
+    mockUpdate.mockResolvedValue(updated as never)
+
+    const res = await request(app)
+      .patch('/notification-triggers/trigger_1')
+      .send({ threshold: 5 })
+
+    expect(res.status).toBe(200)
+    expect(mockUpdate).toHaveBeenCalledWith('trigger_1', { threshold: 5 })
+  })
+
+  it('accepts null threshold to clear the field', async () => {
+    const updated = { ...baseTrigger, threshold: null }
+    mockUpdate.mockResolvedValue(updated as never)
+
+    const res = await request(app)
+      .patch('/notification-triggers/trigger_1')
+      .send({ threshold: null })
+
+    expect(res.status).toBe(200)
+    expect(mockUpdate).toHaveBeenCalledWith('trigger_1', { threshold: null })
   })
 })
 

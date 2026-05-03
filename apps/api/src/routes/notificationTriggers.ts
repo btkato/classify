@@ -20,6 +20,7 @@ const createTriggerBodySchema = z.object({
   name: z.string().min(1),
   triggerEvent: z.nativeEnum(TriggerEvent),
   offsetDays: z.number().int(),
+  threshold: z.number().int().min(1).nullable().optional(),
   messageTemplate: z.string().min(1),
   isActive: z.boolean().optional(),
 })
@@ -29,6 +30,7 @@ const updateTriggerBodySchema = z
     name: z.string().min(1).optional(),
     triggerEvent: z.nativeEnum(TriggerEvent).optional(),
     offsetDays: z.number().int().optional(),
+    threshold: z.number().int().min(1).nullable().optional(),
     messageTemplate: z.string().min(1).optional(),
     isActive: z.boolean().optional(),
   })
