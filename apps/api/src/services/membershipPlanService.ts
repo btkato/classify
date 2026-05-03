@@ -1,4 +1,4 @@
-import { MembershipPlan } from 'db'
+import type { MembershipPlan } from 'db'
 import { prisma } from '../lib/prisma.js'
 
 export async function listMembershipPlans(): Promise<MembershipPlan[]> {

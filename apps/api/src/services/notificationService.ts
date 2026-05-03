@@ -22,8 +22,8 @@ export async function processNotificationJobs(): Promise<void> {
     try {
       await processOneJob(job)
     } catch {
-      await prisma.notificationJob.update({
-        where: { id: job.id },
+      await prisma.notificationJob.updateMany({
+        where: { id: job.id, status: 'PENDING' },
         data: { status: 'FAILED' },
       })
     }

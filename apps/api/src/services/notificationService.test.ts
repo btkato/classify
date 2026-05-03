@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prisma } from '../lib/prisma.js'
+import { getIo } from '../lib/socket.js'
 import { interpolateTemplate, processNotificationJobs, listNotificationJobs } from './notificationService.js'
 
 const { mockEmit, mockTo } = vi.hoisted(() => {
@@ -18,6 +19,7 @@ vi.mock('../lib/prisma.js', () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
       count: vi.fn(),
     },
     messageThread: {
@@ -39,6 +41,7 @@ const mockJobCount = vi.mocked(prisma.notificationJob.count)
 const mockJobFindMany = vi.mocked(prisma.notificationJob.findMany)
 const mockJobFindUnique = vi.mocked(prisma.notificationJob.findUnique)
 const mockJobUpdate = vi.mocked(prisma.notificationJob.update)
+const mockJobUpdateMany = vi.mocked(prisma.notificationJob.updateMany)
 const mockThreadFindFirst = vi.mocked(prisma.messageThread.findFirst)
 const mockThreadCreate = vi.mocked(prisma.messageThread.create)
 const mockThreadUpdate = vi.mocked(prisma.messageThread.update)
@@ -80,6 +83,7 @@ beforeEach(() => {
   mockMessageCreate.mockResolvedValue({ id: 'msg_1', sentAt: new Date() } as never)
   mockThreadUpdate.mockResolvedValue({} as never)
   mockJobUpdate.mockResolvedValue({} as never)
+  mockJobUpdateMany.mockResolvedValue({ count: 1 } as never)
   mockJobCount.mockResolvedValue(0)
 })
 
@@ -181,11 +185,25 @@ describe('processNotificationJobs', () => {
 
     await processNotificationJobs()
 
-    expect(mockJobUpdate).toHaveBeenCalledWith({
-      where: { id: 'job_1' },
+    expect(mockJobUpdateMany).toHaveBeenCalledWith({
+      where: { id: 'job_1', status: 'PENDING' },
       data: { status: 'FAILED' },
     })
     expect(mockMessageCreate).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not overwrite SENT status when an error occurs after the transaction commits', async () => {
+    mockJobFindMany.mockResolvedValue([baseJob] as never)
+    vi.mocked(getIo).mockImplementationOnce(() => {
+      throw new Error('Socket not available')
+    })
+
+    await processNotificationJobs()
+
+    expect(mockJobUpdateMany).toHaveBeenCalledWith({
+      where: { id: 'job_1', status: 'PENDING' },
+      data: { status: 'FAILED' },
+    })
   })
 })
 
