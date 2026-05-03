@@ -8,6 +8,7 @@ interface UpdateTriggerInput {
   name?: string
   triggerEvent?: string
   offsetDays?: number
+  threshold?: number | null
   messageTemplate?: string
   isActive?: boolean
 }

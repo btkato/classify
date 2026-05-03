@@ -39,6 +39,7 @@ const triggers = [
     name: 'Welcome after purchase',
     triggerEvent: 'AFTER_PURCHASE',
     offsetDays: 0,
+    threshold: null,
     messageTemplate: 'Hi {student}, thanks for joining {studio}!',
     isActive: true,
     createdByUserId: 'admin_1',
@@ -50,6 +51,7 @@ const triggers = [
     name: 'Membership expiring soon',
     triggerEvent: 'MEMBERSHIP_EXPIRING',
     offsetDays: 7,
+    threshold: null,
     messageTemplate: 'Hi {student}, your membership expires in {days} days.',
     isActive: false,
     createdByUserId: 'admin_1',
@@ -161,6 +163,7 @@ describe('AdminNotificationsPage', () => {
           name: 'Test trigger',
           triggerEvent: 'AFTER_PURCHASE',
           offsetDays: 3,
+          threshold: null,
           messageTemplate: 'Hello {student}!',
           isActive: true,
         },
@@ -235,5 +238,76 @@ describe('AdminNotificationsPage', () => {
     await userEvent.click(screen.getByTestId('delete-trig_1'))
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('does not show the threshold field when the event is not STUDENT_LESSON_COUNT_REACHED', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'New trigger' }))
+
+    await userEvent.click(screen.getByLabelText('Trigger event'))
+    await userEvent.click(await screen.findByRole('option', { name: 'After purchase' }))
+
+    expect(screen.queryByLabelText('Attendance threshold')).not.toBeInTheDocument()
+  })
+
+  it('shows the threshold field when STUDENT_LESSON_COUNT_REACHED is selected', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'New trigger' }))
+
+    await userEvent.click(screen.getByLabelText('Trigger event'))
+    await userEvent.click(await screen.findByRole('option', { name: 'Student lesson count reached' }))
+
+    expect(screen.getByLabelText('Attendance threshold')).toBeInTheDocument()
+  })
+
+  it('passes threshold value when STUDENT_LESSON_COUNT_REACHED trigger is submitted', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'New trigger' }))
+
+    await userEvent.type(screen.getByLabelText('Name'), 'Milestone 10')
+
+    await userEvent.click(screen.getByLabelText('Trigger event'))
+    await userEvent.click(await screen.findByRole('option', { name: 'Student lesson count reached' }))
+
+    await userEvent.clear(screen.getByLabelText('Offset days'))
+    await userEvent.type(screen.getByLabelText('Offset days'), '0')
+
+    await userEvent.clear(screen.getByLabelText('Attendance threshold'))
+    await userEvent.type(screen.getByLabelText('Attendance threshold'), '10')
+
+    await userEvent.type(screen.getByLabelText('Message template'), 'Hi {student}, congrats on 10 classes!')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Create trigger' }))
+
+    await waitFor(() =>
+      expect(mockCreateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          triggerEvent: 'STUDENT_LESSON_COUNT_REACHED',
+          threshold: 10,
+        }),
+        expect.objectContaining({ onSuccess: expect.any(Function) })
+      )
+    )
+  })
+
+  it('pre-fills threshold when editing a STUDENT_LESSON_COUNT_REACHED trigger', async () => {
+    const triggerWithThreshold = {
+      id: 'trig_3',
+      name: 'Milestone 10',
+      triggerEvent: 'STUDENT_LESSON_COUNT_REACHED',
+      offsetDays: 0,
+      threshold: 10,
+      messageTemplate: 'Congrats on 10 classes!',
+      isActive: true,
+      createdByUserId: 'admin_1',
+      createdAt: '2026-01-03T00:00:00.000Z',
+      updatedAt: '2026-01-03T00:00:00.000Z',
+    }
+    mockUseNotificationTriggers.mockReturnValue({ isLoading: false, data: [triggerWithThreshold] } as never)
+
+    renderPage()
+    await userEvent.click(screen.getByTestId('edit-trig_3'))
+
+    expect(screen.getByLabelText('Attendance threshold')).toHaveValue(10)
   })
 })
