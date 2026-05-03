@@ -158,6 +158,30 @@ describe('POST /notification-triggers', () => {
 
     expect(res.status).toBe(400)
   })
+
+  it('returns 400 when STUDENT_LESSON_COUNT_REACHED is created without a threshold', async () => {
+    const res = await request(app)
+      .post('/notification-triggers')
+      .send({ ...validBody, triggerEvent: 'STUDENT_LESSON_COUNT_REACHED' })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when STUDENT_LESSON_COUNT_REACHED is created with null threshold', async () => {
+    const res = await request(app)
+      .post('/notification-triggers')
+      .send({ ...validBody, triggerEvent: 'STUDENT_LESSON_COUNT_REACHED', threshold: null })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when a threshold is provided for a non-SLCR trigger event', async () => {
+    const res = await request(app)
+      .post('/notification-triggers')
+      .send({ ...validBody, threshold: 5 })
+
+    expect(res.status).toBe(400)
+  })
 })
 
 describe('PATCH /notification-triggers/:id', () => {
@@ -242,6 +266,30 @@ describe('PATCH /notification-triggers/:id', () => {
 
     expect(res.status).toBe(200)
     expect(mockUpdate).toHaveBeenCalledWith('trigger_1', { threshold: null })
+  })
+
+  it('returns 400 when updating triggerEvent to STUDENT_LESSON_COUNT_REACHED without a threshold', async () => {
+    const res = await request(app)
+      .patch('/notification-triggers/trigger_1')
+      .send({ triggerEvent: 'STUDENT_LESSON_COUNT_REACHED' })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when updating triggerEvent to STUDENT_LESSON_COUNT_REACHED with null threshold', async () => {
+    const res = await request(app)
+      .patch('/notification-triggers/trigger_1')
+      .send({ triggerEvent: 'STUDENT_LESSON_COUNT_REACHED', threshold: null })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when updating triggerEvent to a non-SLCR event with a numeric threshold', async () => {
+    const res = await request(app)
+      .patch('/notification-triggers/trigger_1')
+      .send({ triggerEvent: 'MEMBERSHIP_EXPIRING', threshold: 5 })
+
+    expect(res.status).toBe(400)
   })
 })
 

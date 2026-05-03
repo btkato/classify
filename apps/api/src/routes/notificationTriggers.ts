@@ -16,14 +16,32 @@ export const notificationTriggersRouter = express.Router()
 
 const triggerParamsSchema = z.object({ id: z.string().min(1) })
 
-const createTriggerBodySchema = z.object({
-  name: z.string().min(1),
-  triggerEvent: z.nativeEnum(TriggerEvent),
-  offsetDays: z.number().int(),
-  threshold: z.number().int().min(1).nullable().optional(),
-  messageTemplate: z.string().min(1),
-  isActive: z.boolean().optional(),
-})
+const createTriggerBodySchema = z
+  .object({
+    name: z.string().min(1),
+    triggerEvent: z.nativeEnum(TriggerEvent),
+    offsetDays: z.number().int(),
+    threshold: z.number().int().min(1).nullable().optional(),
+    messageTemplate: z.string().min(1),
+    isActive: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.triggerEvent === TriggerEvent.STUDENT_LESSON_COUNT_REACHED) {
+      if (data.threshold == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'threshold is required for STUDENT_LESSON_COUNT_REACHED',
+          path: ['threshold'],
+        })
+      }
+    } else if (data.threshold != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'threshold is only applicable for STUDENT_LESSON_COUNT_REACHED',
+        path: ['threshold'],
+      })
+    }
+  })
 
 const updateTriggerBodySchema = z
   .object({
@@ -36,6 +54,26 @@ const updateTriggerBodySchema = z
   })
   .refine((data) => Object.values(data).some((value) => value !== undefined), {
     message: 'At least one field must be provided',
+  })
+  .superRefine((data, ctx) => {
+    if (data.triggerEvent === TriggerEvent.STUDENT_LESSON_COUNT_REACHED && data.threshold == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'threshold is required for STUDENT_LESSON_COUNT_REACHED',
+        path: ['threshold'],
+      })
+    }
+    if (
+      data.triggerEvent !== undefined &&
+      data.triggerEvent !== TriggerEvent.STUDENT_LESSON_COUNT_REACHED &&
+      typeof data.threshold === 'number'
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'threshold is only applicable for STUDENT_LESSON_COUNT_REACHED',
+        path: ['threshold'],
+      })
+    }
   })
 
 notificationTriggersRouter.get(
