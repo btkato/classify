@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { prisma } from '../lib/prisma.js'
-import { enrollStudent, cancelRegistration } from './registrationService.js'
+import { enrollStudent, cancelRegistration, markAttended } from './registrationService.js'
 import { ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js'
 
 vi.mock('../lib/prisma.js', () => ({
@@ -21,6 +21,8 @@ vi.mock('../lib/prisma.js', () => ({
       update: vi.fn(),
     },
     membershipTransaction: { create: vi.fn() },
+    notificationTrigger: { findMany: vi.fn() },
+    notificationJob: { createMany: vi.fn() },
     $transaction: vi.fn(),
   },
 }))
@@ -37,6 +39,8 @@ const mockMembershipFindMany = vi.mocked(prisma.membership.findMany)
 const mockMembershipFindUnique = vi.mocked(prisma.membership.findUnique)
 const mockMembershipUpdate = vi.mocked(prisma.membership.update)
 const mockMembershipTransactionCreate = vi.mocked(prisma.membershipTransaction.create)
+const mockNotificationTriggerFindMany = vi.mocked(prisma.notificationTrigger.findMany)
+const mockNotificationJobCreateMany = vi.mocked(prisma.notificationJob.createMany)
 const mockTransaction = vi.mocked(prisma.$transaction)
 
 const activeClass = {
@@ -516,6 +520,124 @@ describe('cancelRegistration', () => {
       await cancelRegistration('reg_1', 'user_1')
 
       expect(mockMembershipTransactionCreate).not.toHaveBeenCalled()
+    })
+  })
+})
+
+describe('markAttended', () => {
+  const enrolledRegistration = {
+    ...baseRegistration,
+    status: 'ENROLLED' as const,
+    membershipId: 'mem_1',
+    class: { instructorId: 'instructor_1' },
+  }
+
+  const attendedRegistration = { ...enrolledRegistration, status: 'ATTENDED' as const }
+
+  beforeEach(() => {
+    mockRegistrationFindUnique.mockResolvedValue(enrolledRegistration as never)
+    mockRegistrationUpdate.mockResolvedValue(attendedRegistration as never)
+    mockRegistrationCount.mockResolvedValue(5)
+    mockNotificationTriggerFindMany.mockResolvedValue([])
+  })
+
+  it('throws NotFoundError when the registration does not exist', async () => {
+    mockRegistrationFindUnique.mockResolvedValue(null)
+
+    await expect(markAttended('reg_1', 'instructor_1', false)).rejects.toThrow(NotFoundError)
+  })
+
+  it('throws ForbiddenError when an INSTRUCTOR is not the class instructor', async () => {
+    await expect(markAttended('reg_1', 'other_instructor', false)).rejects.toThrow(ForbiddenError)
+  })
+
+  it('allows an ADMIN to mark attendance for any class', async () => {
+    await expect(markAttended('reg_1', 'some_admin', true)).resolves.not.toThrow()
+  })
+
+  it('throws ValidationError when the registration is not ENROLLED', async () => {
+    mockRegistrationFindUnique.mockResolvedValue({ ...enrolledRegistration, status: 'WAITLISTED' } as never)
+
+    await expect(markAttended('reg_1', 'instructor_1', false)).rejects.toThrow(ValidationError)
+  })
+
+  it('updates the registration status to ATTENDED', async () => {
+    await markAttended('reg_1', 'instructor_1', false)
+
+    expect(mockRegistrationUpdate).toHaveBeenCalledWith({
+      where: { id: 'reg_1' },
+      data: { status: 'ATTENDED' },
+    })
+  })
+
+  it('returns the updated registration', async () => {
+    const result = await markAttended('reg_1', 'instructor_1', false)
+
+    expect(result).toEqual(attendedRegistration)
+  })
+
+  it('does not create notification jobs when no triggers match the attended count', async () => {
+    mockNotificationTriggerFindMany.mockResolvedValue([])
+
+    await markAttended('reg_1', 'instructor_1', false)
+
+    expect(mockNotificationJobCreateMany).not.toHaveBeenCalled()
+  })
+
+  describe('notification job creation', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-05-02T12:00:00.000Z'))
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('creates notification jobs for each matching STUDENT_LESSON_COUNT_REACHED trigger', async () => {
+      mockRegistrationCount.mockResolvedValue(10)
+      mockNotificationTriggerFindMany.mockResolvedValue([
+        { id: 'trigger_1', offsetDays: 0, triggerEvent: 'STUDENT_LESSON_COUNT_REACHED' },
+        { id: 'trigger_2', offsetDays: 3, triggerEvent: 'STUDENT_LESSON_COUNT_REACHED' },
+      ] as never)
+
+      await markAttended('reg_1', 'instructor_1', false)
+
+      expect(mockNotificationTriggerFindMany).toHaveBeenCalledWith({
+        where: {
+          isActive: true,
+          triggerEvent: 'STUDENT_LESSON_COUNT_REACHED',
+          threshold: 10,
+        },
+      })
+      expect(mockNotificationJobCreateMany).toHaveBeenCalledWith({
+        data: [
+          {
+            userId: 'user_1',
+            membershipId: 'mem_1',
+            triggerId: 'trigger_1',
+            triggerAt: new Date('2026-05-02T12:00:00.000Z'),
+          },
+          {
+            userId: 'user_1',
+            membershipId: 'mem_1',
+            triggerId: 'trigger_2',
+            triggerAt: new Date('2026-05-05T12:00:00.000Z'),
+          },
+        ],
+      })
+    })
+
+    it('counts ATTENDED registrations scoped to the same membership', async () => {
+      await markAttended('reg_1', 'instructor_1', false)
+
+      expect(mockRegistrationCount).toHaveBeenCalledWith({
+        where: {
+          userId: 'user_1',
+          membershipId: 'mem_1',
+          status: 'ATTENDED',
+        },
+      })
     })
   })
 })

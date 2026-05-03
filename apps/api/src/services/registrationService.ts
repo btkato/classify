@@ -3,6 +3,8 @@ import { NotFoundError, ForbiddenError, ValidationError } from '../lib/errors.js
 import { getValidMembership } from './membershipService.js'
 import type { Registration } from 'db'
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24
+
 export async function enrollStudent(userId: string, classId: string): Promise<Registration> {
   return prisma.$transaction(async (transaction) => {
     const foundClass = await transaction.class.findUnique({ where: { id: classId } })
@@ -48,6 +50,62 @@ export async function enrollStudent(userId: string, classId: string): Promise<Re
     }
 
     return registration
+  })
+}
+
+export async function markAttended(
+  registrationId: string,
+  requesterId: string,
+  isAdmin: boolean
+): Promise<Registration> {
+  return prisma.$transaction(async (transaction) => {
+    const registration = await transaction.registration.findUnique({
+      where: { id: registrationId },
+      include: { class: { select: { instructorId: true } } },
+    })
+
+    if (!registration) throw new NotFoundError('Registration not found')
+    if (!isAdmin && registration.class.instructorId !== requesterId) {
+      throw new ForbiddenError('You are not the instructor for this class')
+    }
+    if (registration.status !== 'ENROLLED') {
+      throw new ValidationError('Only ENROLLED registrations can be marked as attended')
+    }
+
+    const attended = await transaction.registration.update({
+      where: { id: registrationId },
+      data: { status: 'ATTENDED' },
+    })
+
+    const attendedCount = await transaction.registration.count({
+      where: {
+        userId: registration.userId,
+        membershipId: registration.membershipId,
+        status: 'ATTENDED',
+      },
+    })
+
+    const matchingTriggers = await transaction.notificationTrigger.findMany({
+      where: {
+        isActive: true,
+        triggerEvent: 'STUDENT_LESSON_COUNT_REACHED',
+        threshold: attendedCount,
+      },
+    })
+
+    if (matchingTriggers.length > 0) {
+      const now = new Date()
+      await transaction.notificationJob.createMany({
+        data: matchingTriggers.map((trigger) => ({
+          userId: registration.userId,
+          membershipId: registration.membershipId,
+          triggerId: trigger.id,
+          triggerAt: new Date(now.getTime() + trigger.offsetDays * MS_PER_DAY),
+        })),
+      })
+    }
+
+    return attended
   })
 }
 
