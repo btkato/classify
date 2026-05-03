@@ -61,6 +61,7 @@ export default function AdminNotificationsPage() {
   const [formName, setFormName] = useState('')
   const [formEvent, setFormEvent] = useState('')
   const [formOffsetDays, setFormOffsetDays] = useState(0)
+  const [formThreshold, setFormThreshold] = useState<number | null>(null)
   const [formTemplate, setFormTemplate] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
 
@@ -68,6 +69,7 @@ export default function AdminNotificationsPage() {
     setFormName('')
     setFormEvent('')
     setFormOffsetDays(0)
+    setFormThreshold(null)
     setFormTemplate('')
     setFormIsActive(true)
     setDialog({ type: 'create' })
@@ -77,10 +79,13 @@ export default function AdminNotificationsPage() {
     setFormName(trigger.name)
     setFormEvent(trigger.triggerEvent)
     setFormOffsetDays(trigger.offsetDays)
+    setFormThreshold(trigger.threshold)
     setFormTemplate(trigger.messageTemplate)
     setFormIsActive(trigger.isActive)
     setDialog({ type: 'edit', trigger })
   }
+
+  const threshold = formEvent === 'STUDENT_LESSON_COUNT_REACHED' ? formThreshold : null
 
   function handleFormSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -92,6 +97,7 @@ export default function AdminNotificationsPage() {
           name: formName,
           triggerEvent: formEvent,
           offsetDays: formOffsetDays,
+          threshold,
           messageTemplate: formTemplate,
           isActive: formIsActive,
         },
@@ -103,6 +109,7 @@ export default function AdminNotificationsPage() {
           name: formName,
           triggerEvent: formEvent,
           offsetDays: formOffsetDays,
+          threshold,
           messageTemplate: formTemplate,
           isActive: formIsActive,
         },
@@ -252,6 +259,26 @@ export default function AdminNotificationsPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {formEvent === 'STUDENT_LESSON_COUNT_REACHED' && (
+              <div>
+                <Label htmlFor="threshold">Attendance threshold</Label>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  The number of classes attended that fires this notification.
+                </p>
+                <Input
+                  id="threshold"
+                  type="number"
+                  min={1}
+                  value={formThreshold ?? ''}
+                  onChange={(event) =>
+                    setFormThreshold(event.target.value ? Number(event.target.value) : null)
+                  }
+                  className="mt-1"
+                  required
+                />
+              </div>
+            )}
 
             <div>
               <Label htmlFor="offsetDays">Offset days</Label>
