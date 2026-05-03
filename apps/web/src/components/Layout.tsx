@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import Navbar from './Navbar'
 import { Skeleton } from './ui/skeleton'
 import { useSocket } from '../hooks/useSocket'
+import { useSessionExpiry } from '../hooks/useSessionExpiry'
 
 function PageSkeleton() {
   return (
@@ -18,6 +19,7 @@ function PageSkeleton() {
 
 export default function Layout() {
   useSocket()
+  useSessionExpiry()
 
   return (
     <div className="min-h-screen bg-background text-foreground">
