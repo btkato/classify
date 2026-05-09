@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -111,6 +111,67 @@ describe('AdminLessonSetFormPage', () => {
       expect(mockMutate).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'DRAFT' }),
         expect.objectContaining({ onSuccess: expect.any(Function) })
+      )
+    )
+  })
+
+  it('does not show session schedule when scheduling fields are empty', () => {
+    renderPage()
+    expect(screen.queryByText('Session Schedule')).not.toBeInTheDocument()
+  })
+
+  it('shows one Override button per session when scheduling fields are filled', () => {
+    renderPage()
+    fireEvent.change(screen.getByLabelText('Total Sessions'), { target: { value: '3' } })
+    fireEvent.change(screen.getByLabelText('First Session Date & Time'), { target: { value: '2026-06-01T10:00' } })
+    fireEvent.change(screen.getByLabelText('Interval (days)'), { target: { value: '7' } })
+
+    expect(screen.getByText('Session Schedule')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Override' })).toHaveLength(3)
+  })
+
+  it('shows override inputs when Override is clicked', async () => {
+    renderPage()
+    fireEvent.change(screen.getByLabelText('Total Sessions'), { target: { value: '2' } })
+    fireEvent.change(screen.getByLabelText('First Session Date & Time'), { target: { value: '2026-06-01T10:00' } })
+    fireEvent.change(screen.getByLabelText('Interval (days)'), { target: { value: '7' } })
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Override' })[0])
+
+    expect(screen.getByRole('button', { name: 'Clear override' })).toBeInTheDocument()
+    expect(screen.getByTestId('session-1-override-starts-at')).toBeInTheDocument()
+    expect(screen.getByTestId('session-1-override-location')).toBeInTheDocument()
+  })
+
+  it('hides override inputs when Clear override is clicked', async () => {
+    renderPage()
+    fireEvent.change(screen.getByLabelText('Total Sessions'), { target: { value: '2' } })
+    fireEvent.change(screen.getByLabelText('First Session Date & Time'), { target: { value: '2026-06-01T10:00' } })
+    fireEvent.change(screen.getByLabelText('Interval (days)'), { target: { value: '7' } })
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Override' })[0])
+    await userEvent.click(screen.getByRole('button', { name: 'Clear override' }))
+
+    expect(screen.queryByRole('button', { name: 'Clear override' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Override' })).toHaveLength(2)
+  })
+
+  it('includes session overrides in the mutate call when submitted', async () => {
+    renderPage()
+    await fillRequiredFields()
+    fireEvent.change(screen.getByLabelText('First Session Date & Time'), { target: { value: '2026-06-01T10:00' } })
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Override' })[0])
+    fireEvent.change(screen.getByTestId('session-1-override-location'), { target: { value: 'Studio B' } })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+
+    await waitFor(() =>
+      expect(mockMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sessionOverrides: [{ sessionNumber: 1, location: 'Studio B' }],
+        }),
+        expect.any(Object)
       )
     )
   })
