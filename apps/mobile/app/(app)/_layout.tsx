@@ -1,9 +1,11 @@
 import { useAuth } from '@clerk/clerk-expo'
 import { Redirect, Stack } from 'expo-router'
 import { ActivityIndicator, View } from 'react-native'
+import { useRegisterPushToken } from '../../hooks/useRegisterPushToken'
 
 export default function AppLayout() {
   const { isLoaded, isSignedIn } = useAuth()
+  useRegisterPushToken()
 
   if (!isLoaded) {
     return (
@@ -22,6 +24,7 @@ export default function AppLayout() {
       <Stack.Screen name="index" options={{ title: 'Dashboard' }} />
       <Stack.Screen name="classes/index" options={{ title: 'Classes' }} />
       <Stack.Screen name="classes/[id]" options={{ title: 'Class Detail' }} />
+      <Stack.Screen name="lesson-sets/[id]" options={{ title: 'Series Detail' }} />
     </Stack>
   )
 }
