@@ -187,13 +187,38 @@ export async function cancelMembership(id: string, userId: string): Promise<Memb
     throw new ValidationError('Only CONTINUOUS_MONTHLY memberships can be self-cancelled')
   }
 
-  if (membership.status !== 'ACTIVE') {
-    throw new ValidationError('Only ACTIVE memberships can be cancelled')
+  if (membership.status !== 'ACTIVE' && membership.status !== 'PAUSED') {
+    throw new ValidationError('Only ACTIVE or PAUSED memberships can be cancelled')
   }
 
   return prisma.membership.update({
     where: { id },
     data: { status: 'CANCELLED' },
+  })
+}
+
+export async function resumeMembership(id: string, userId: string): Promise<Membership> {
+  const membership = await prisma.membership.findUnique({ where: { id } })
+
+  if (!membership) {
+    throw new NotFoundError('Membership not found')
+  }
+
+  if (membership.userId !== userId) {
+    throw new ForbiddenError('You do not have permission to resume this membership')
+  }
+
+  if (membership.type !== 'CONTINUOUS_MONTHLY') {
+    throw new ValidationError('Only CONTINUOUS_MONTHLY memberships can be self-resumed')
+  }
+
+  if (membership.status !== 'PAUSED') {
+    throw new ValidationError('Only PAUSED memberships can be resumed')
+  }
+
+  return prisma.membership.update({
+    where: { id },
+    data: { status: 'ACTIVE' },
   })
 }
 

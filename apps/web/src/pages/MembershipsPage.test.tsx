@@ -30,6 +30,18 @@ const continuousMonthly = {
   updatedAt: now,
 }
 
+const pausedContinuousMonthly = {
+  id: 'mem_3',
+  type: 'CONTINUOUS_MONTHLY',
+  status: 'PAUSED',
+  expiresAt: '2026-05-21T00:00:00.000Z',
+  classesRemaining: null,
+  classesTotal: null,
+  priority: 1,
+  createdAt: now,
+  updatedAt: now,
+}
+
 const classPack = {
   id: 'mem_2',
   type: 'CLASS_PACK_10',
@@ -89,7 +101,7 @@ describe('MembershipsPage', () => {
     expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument()
   })
 
-  it('shows empty state when there are no active memberships', async () => {
+  it('shows empty state when there are no current memberships', async () => {
     mockApiFetch
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce(emptyHistory)
@@ -97,7 +109,7 @@ describe('MembershipsPage', () => {
     renderPage()
 
     await waitFor(() => {
-      expect(screen.getByText(/no active memberships/i)).toBeInTheDocument()
+      expect(screen.getByText(/no current memberships/i)).toBeInTheDocument()
       expect(screen.getByRole('link', { name: /purchase a membership/i })).toBeInTheDocument()
     })
   })
@@ -247,6 +259,66 @@ describe('MembershipsPage', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
+    })
+  })
+
+  it('shows both Resume and Cancel buttons on a PAUSED CONTINUOUS_MONTHLY membership', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce([pausedContinuousMonthly])
+      .mockResolvedValueOnce(emptyHistory)
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /resume/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^cancel$/i })).toBeInTheDocument()
+    })
+  })
+
+  it('renders a PAUSED membership in the Current section with a Paused badge', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce([pausedContinuousMonthly])
+      .mockResolvedValueOnce(emptyHistory)
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Continuous Monthly')).toBeInTheDocument()
+      expect(screen.getByText(/paused/i)).toBeInTheDocument()
+    })
+  })
+
+  it('shows Resume button on a PAUSED CONTINUOUS_MONTHLY membership', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce([pausedContinuousMonthly])
+      .mockResolvedValueOnce(emptyHistory)
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /resume/i })).toBeInTheDocument()
+    })
+  })
+
+  it('fires the resume mutation when Resume is clicked', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce([pausedContinuousMonthly])
+      .mockResolvedValueOnce(emptyHistory)
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(emptyHistory)
+
+    renderPage()
+
+    await waitFor(() => screen.getByRole('button', { name: /resume/i }))
+    await userEvent.click(screen.getByRole('button', { name: /resume/i }))
+
+    await waitFor(() => {
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/memberships/mem_3/resume',
+        'token_123',
+        { method: 'PATCH' }
+      )
     })
   })
 })

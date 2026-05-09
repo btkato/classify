@@ -8,7 +8,7 @@ const historyQuerySchema = z.object({
 })
 import { requireAuth } from '../middleware/requireAuth.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
-import { createMembership, listMemberships, listMembershipHistory, getMembership, cancelMembership } from '../services/membershipService.js'
+import { createMembership, listMemberships, listMembershipHistory, getMembership, cancelMembership, resumeMembership } from '../services/membershipService.js'
 
 export const membershipsRouter = express.Router()
 
@@ -81,6 +81,23 @@ membershipsRouter.get(
     }
 
     const membership = await getMembership(id, userId, false)
+    res.status(200).json(membership)
+  })
+)
+
+membershipsRouter.patch(
+  '/:id/resume',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { id } = membershipParamsSchema.parse(req.params)
+    const userId = req.auth?.userId
+
+    if (!userId) {
+      res.status(401).json({ error: { message: 'Unauthorized' } })
+      return
+    }
+
+    const membership = await resumeMembership(id, userId)
     res.status(200).json(membership)
   })
 )

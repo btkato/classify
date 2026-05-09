@@ -14,6 +14,7 @@ vi.mock('../services/membershipService.js', () => ({
   listMembershipHistory: vi.fn(),
   getMembership: vi.fn(),
   cancelMembership: vi.fn(),
+  resumeMembership: vi.fn(),
 }))
 
 import { app } from '../app.js'
@@ -26,6 +27,7 @@ const mockListMemberships = vi.mocked(membershipService.listMemberships)
 const mockListMembershipHistory = vi.mocked(membershipService.listMembershipHistory)
 const mockGetMembership = vi.mocked(membershipService.getMembership)
 const mockCancelMembership = vi.mocked(membershipService.cancelMembership)
+const mockResumeMembership = vi.mocked(membershipService.resumeMembership)
 
 const baseMembership = {
   id: 'mem_1',
@@ -276,6 +278,59 @@ describe('PATCH /memberships/:id/cancel', () => {
       mockCancelMembership.mockRejectedValue(new ValidationError('Only CONTINUOUS_MONTHLY memberships can be self-cancelled'))
 
       const res = await request(app).patch('/memberships/mem_1/cancel')
+
+      expect(res.status).toBe(400)
+    })
+  })
+})
+
+describe('PATCH /memberships/:id/resume', () => {
+  const resumedMembership = { ...baseMembership, type: 'CONTINUOUS_MONTHLY', status: 'ACTIVE' }
+
+  describe('authentication', () => {
+    it('returns 401 when not authenticated', async () => {
+      mockGetAuth.mockReturnValue({ userId: null } as never)
+
+      const res = await request(app).patch('/memberships/mem_1/resume')
+
+      expect(res.status).toBe(401)
+    })
+  })
+
+  describe('success', () => {
+    it('calls resumeMembership with id and userId from auth, returns 200', async () => {
+      mockResumeMembership.mockResolvedValue(resumedMembership as never)
+
+      const res = await request(app).patch('/memberships/mem_1/resume')
+
+      expect(res.status).toBe(200)
+      expect(mockResumeMembership).toHaveBeenCalledWith('mem_1', 'user_1')
+      expect(res.body).toMatchObject({ status: 'ACTIVE' })
+    })
+  })
+
+  describe('error handling', () => {
+    it('returns 404 when service throws NotFoundError', async () => {
+      mockResumeMembership.mockRejectedValue(new NotFoundError('Membership not found'))
+
+      const res = await request(app).patch('/memberships/mem_1/resume')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 403 when service throws ForbiddenError', async () => {
+      mockResumeMembership.mockRejectedValue(new ForbiddenError('You do not have permission'))
+
+      const res = await request(app).patch('/memberships/mem_1/resume')
+
+      expect(res.status).toBe(403)
+    })
+
+    it('returns 400 when service throws ValidationError', async () => {
+      const { ValidationError } = await import('../lib/errors.js')
+      mockResumeMembership.mockRejectedValue(new ValidationError('Only PAUSED memberships can be resumed'))
+
+      const res = await request(app).patch('/memberships/mem_1/resume')
 
       expect(res.status).toBe(400)
     })
