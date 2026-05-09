@@ -12,6 +12,7 @@ const updateProfileSchema = z.object({
   lastName: z.string().min(1).optional(),
   phone: z.string().min(1).optional(),
   dateOfBirth: z.coerce.date().optional(),
+  pushToken: z.string().min(1).nullable().optional(),
 })
 
 usersRouter.get(

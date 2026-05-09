@@ -63,7 +63,7 @@ describe('updateProfile', () => {
     expect(result).toEqual(updated)
     expect(mockUpdate).toHaveBeenCalledWith({
       where: { id: 'user_123' },
-      data: { firstName: 'Use' },
+      data: { firstName: 'Use', lastName: undefined, phone: undefined, dateOfBirth: undefined, pushToken: undefined },
       include: { roles: true },
     })
   })
@@ -75,7 +75,7 @@ describe('updateProfile', () => {
 
     expect(mockUpdate).toHaveBeenCalledWith({
       where: { id: 'user_123' },
-      data: { firstName: 'Brandon', lastName: undefined, phone: undefined },
+      data: { firstName: 'Brandon', lastName: undefined, phone: undefined, dateOfBirth: undefined, pushToken: undefined },
       include: { roles: true },
     })
     expect(mockUpdate).not.toHaveBeenCalledWith(
@@ -93,7 +93,22 @@ describe('updateProfile', () => {
     expect(result).toEqual(updated)
     expect(mockUpdate).toHaveBeenCalledWith({
       where: { id: 'user_123' },
-      data: { firstName: undefined, lastName: undefined, phone: undefined, dateOfBirth: dob },
+      data: { firstName: undefined, lastName: undefined, phone: undefined, dateOfBirth: dob, pushToken: undefined },
+      include: { roles: true },
+    })
+  })
+
+  it('allows updating pushToken', async () => {
+    const token = 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]'
+    const updated = { ...mockUser, pushToken: token }
+    mockUpdate.mockResolvedValue(updated as never)
+
+    const result = await updateProfile('user_123', { pushToken: token })
+
+    expect(result).toEqual(updated)
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: 'user_123' },
+      data: { firstName: undefined, lastName: undefined, phone: undefined, dateOfBirth: undefined, pushToken: token },
       include: { roles: true },
     })
   })
