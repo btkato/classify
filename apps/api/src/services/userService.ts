@@ -16,6 +16,7 @@ interface UpdateProfileInput {
   lastName?: string
   phone?: string
   dateOfBirth?: Date
+  pushToken?: string | null
 }
 
 interface AdminUpdateUserInput extends UpdateProfileInput {
@@ -77,6 +78,7 @@ export async function updateProfile(id: string, data: UpdateProfileInput): Promi
     lastName: data.lastName,
     phone: data.phone,
     dateOfBirth: data.dateOfBirth,
+    pushToken: data.pushToken,
   })
 }
 
