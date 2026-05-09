@@ -20,6 +20,7 @@ function NotFoundPage() {
 const ClassListPage = lazy(() => import('./pages/ClassListPage'))
 const ClassDetailPage = lazy(() => import('./pages/ClassDetailPage'))
 const LessonSetDetailPage = lazy(() => import('./pages/LessonSetDetailPage'))
+const CompleteProfilePage = lazy(() => import('./pages/CompleteProfilePage'))
 const StudentDashboard = lazy(() => import('./pages/StudentDashboard'))
 const MyRegistrationsPage = lazy(() => import('./pages/MyRegistrationsPage'))
 const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
@@ -64,6 +65,14 @@ export default function App() {
 
           <Route path="/sign-in/*" element={<SignInPage />} />
           <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
+          <Route
+            path="/complete-profile"
+            element={
+              <ProtectedRoute>
+                <CompleteProfilePage />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/dashboard"
