@@ -3,15 +3,29 @@ import { prisma } from '../lib/prisma.js'
 import { getIo } from '../lib/socket.js'
 import { interpolateTemplate, processNotificationJobs, listNotificationJobs } from './notificationService.js'
 
-const { mockEmit, mockTo } = vi.hoisted(() => {
+const { mockEmit, mockTo, mockSendPushNotificationsAsync, mockChunkPushNotifications, mockIsExpoPushToken } = vi.hoisted(() => {
   const mockEmit = vi.fn()
   const mockTo = vi.fn().mockReturnValue({ emit: mockEmit })
-  return { mockEmit, mockTo }
+  const mockSendPushNotificationsAsync = vi.fn().mockResolvedValue([])
+  const mockChunkPushNotifications = vi.fn().mockImplementation((messages: unknown[]) => [messages])
+  const mockIsExpoPushToken = vi.fn().mockReturnValue(true)
+  return { mockEmit, mockTo, mockSendPushNotificationsAsync, mockChunkPushNotifications, mockIsExpoPushToken }
 })
 
 vi.mock('../lib/socket.js', () => ({
   getIo: vi.fn().mockReturnValue({ to: mockTo }),
 }))
+
+vi.mock('expo-server-sdk', () => {
+  function MockExpo() {
+    return {
+      sendPushNotificationsAsync: mockSendPushNotificationsAsync,
+      chunkPushNotifications: mockChunkPushNotifications,
+    }
+  }
+  MockExpo.isExpoPushToken = mockIsExpoPushToken
+  return { Expo: MockExpo }
+})
 
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
@@ -75,6 +89,9 @@ const baseJob = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockSendPushNotificationsAsync.mockResolvedValue([])
+  mockChunkPushNotifications.mockImplementation((messages: unknown[]) => [messages])
+  mockIsExpoPushToken.mockReturnValue(true)
   mockTransaction.mockImplementation(async (fn) => fn(prisma as never))
   mockJobFindUnique.mockResolvedValue({ status: 'PENDING' } as never)
   mockThreadFindFirst.mockResolvedValue(null)
@@ -190,6 +207,32 @@ describe('processNotificationJobs', () => {
       data: { status: 'FAILED' },
     })
     expect(mockMessageCreate).toHaveBeenCalledTimes(1)
+  })
+
+  it('collects push messages and batch-sends them via Expo SDK when users have push tokens', async () => {
+    const jobWithToken = {
+      ...baseJob,
+      user: { ...baseJob.user, pushToken: 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]' },
+    }
+    mockJobFindMany.mockResolvedValue([jobWithToken] as never)
+
+    await processNotificationJobs()
+
+    expect(mockChunkPushNotifications).toHaveBeenCalledWith([
+      expect.objectContaining({
+        to: 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]',
+        body: 'Hi Frank, welcome to Classify!',
+      }),
+    ])
+    expect(mockSendPushNotificationsAsync).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not call sendPushNotificationsAsync when no users have push tokens', async () => {
+    mockJobFindMany.mockResolvedValue([baseJob] as never)
+
+    await processNotificationJobs()
+
+    expect(mockSendPushNotificationsAsync).not.toHaveBeenCalled()
   })
 
   it('does not overwrite SENT status when an error occurs after the transaction commits', async () => {
