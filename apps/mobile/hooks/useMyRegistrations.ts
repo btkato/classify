@@ -4,10 +4,10 @@ import { apiFetch } from '../lib/apiFetch'
 import type { RegistrationWithClass } from '../lib/types'
 
 export function useMyRegistrations() {
-  const { getToken, isSignedIn } = useAuth()
+  const { getToken, isSignedIn, userId } = useAuth()
 
   return useQuery({
-    queryKey: ['my-registrations'],
+    queryKey: ['my-registrations', userId],
     queryFn: async () => {
       const token = await getToken()
       return apiFetch<RegistrationWithClass[]>('/registrations', token)
