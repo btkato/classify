@@ -3,6 +3,12 @@ import { useAuth } from '@clerk/clerk-react'
 import { apiFetch } from '../lib/api'
 import type { LessonSet } from '../lib/types'
 
+interface SessionOverrideInput {
+  sessionNumber: number
+  startsAt?: string
+  location?: string
+}
+
 interface CreateLessonSetInput {
   title: string
   description?: string
@@ -16,6 +22,7 @@ interface CreateLessonSetInput {
   location?: string
   instructorId?: string
   status: string
+  sessionOverrides?: SessionOverrideInput[]
 }
 
 export function useCreateLessonSet() {

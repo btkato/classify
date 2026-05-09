@@ -30,6 +30,13 @@ import {
   CommandList,
 } from '../components/ui/command'
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24
+
+interface SessionOverrideState {
+  startsAt: string
+  location: string
+}
+
 export default function AdminLessonSetFormPage() {
   const navigate = useNavigate()
   const createLessonSet = useCreateLessonSet()
@@ -48,10 +55,55 @@ export default function AdminLessonSetFormPage() {
   const [instructorId, setInstructorId] = useState<string | undefined>(undefined)
   const [comboboxOpen, setComboboxOpen] = useState(false)
   const [comboboxSearch, setComboboxSearch] = useState('')
+  const [sessionOverrides, setSessionOverrides] = useState<Record<number, SessionOverrideState>>({})
+  const [expandedSessions, setExpandedSessions] = useState<Set<number>>(new Set())
 
   const debouncedSearch = useDebounce(comboboxSearch, 200)
   const { data: instructors } = useInstructors(debouncedSearch || undefined)
   const selectedInstructor = instructors?.find((instructor) => instructor.id === instructorId)
+
+  const parsedTotalSessions = Number(totalSessions)
+  const parsedIntervalDays = Number(intervalDays)
+  const showSessionSchedule =
+    !!firstSessionStartsAt && parsedTotalSessions > 0 && parsedIntervalDays > 0
+
+  function toggleSessionOverride(sessionNumber: number) {
+    setExpandedSessions((prev) => {
+      const next = new Set(prev)
+      if (next.has(sessionNumber)) {
+        next.delete(sessionNumber)
+        setSessionOverrides((prevOverrides) => {
+          const updated = { ...prevOverrides }
+          delete updated[sessionNumber]
+          return updated
+        })
+      } else {
+        next.add(sessionNumber)
+      }
+      return next
+    })
+  }
+
+  function updateSessionOverride(
+    sessionNumber: number,
+    field: keyof SessionOverrideState,
+    value: string
+  ) {
+    setSessionOverrides((prev) => ({
+      ...prev,
+      [sessionNumber]: { ...(prev[sessionNumber] ?? { startsAt: '', location: '' }), [field]: value },
+    }))
+  }
+
+  function buildOverrides() {
+    return Object.entries(sessionOverrides)
+      .filter(([, override]) => override.startsAt || override.location)
+      .map(([sessionNum, override]) => ({
+        sessionNumber: Number(sessionNum),
+        ...(override.startsAt ? { startsAt: override.startsAt } : {}),
+        ...(override.location ? { location: override.location } : {}),
+      }))
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -59,20 +111,22 @@ export default function AdminLessonSetFormPage() {
   }
 
   function handleCreate(status: 'DRAFT' | 'ACTIVE') {
+    const overrides = buildOverrides()
     createLessonSet.mutate(
       {
         title,
         description: description || undefined,
         enrollmentType,
         categoryId,
-        totalSessions: Number(totalSessions),
+        totalSessions: parsedTotalSessions,
         capacity: Number(capacity),
         durationMinutes: Number(durationMinutes),
         firstSessionStartsAt,
-        intervalDays: Number(intervalDays),
+        intervalDays: parsedIntervalDays,
         location: location || undefined,
         instructorId,
         status,
+        sessionOverrides: overrides.length > 0 ? overrides : undefined,
       },
       { onSuccess: () => navigate('/admin/lesson-sets') }
     )
@@ -271,6 +325,113 @@ export default function AdminLessonSetFormPage() {
             onChange={(e) => setLocation(e.target.value)}
           />
         </div>
+
+        {showSessionSchedule && (
+          <div>
+            <div className="mb-3 flex items-baseline justify-between">
+              <h2 className="text-sm font-semibold">Session Schedule</h2>
+              <p className="text-xs text-muted-foreground">Override individual sessions below</p>
+            </div>
+            <div className="divide-y overflow-hidden rounded-xl border">
+              {Array.from({ length: parsedTotalSessions }, (_, index) => {
+                const sessionNumber = index + 1
+                const sessionDate = new Date(
+                  new Date(firstSessionStartsAt).getTime() +
+                    index * parsedIntervalDays * MS_PER_DAY
+                )
+                const isExpanded = expandedSessions.has(sessionNumber)
+                const override = sessionOverrides[sessionNumber]
+                const dateLabel = sessionDate.toLocaleString(undefined, {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })
+                const defaultLabel = location ? `${dateLabel} · ${location}` : dateLabel
+
+                return (
+                  <div
+                    key={sessionNumber}
+                    className={isExpanded ? 'bg-blue-50/40 px-4 py-3' : 'px-4 py-3'}
+                  >
+                    {isExpanded ? (
+                      <>
+                        <div className="mb-3 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">Session {sessionNumber}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Default: {defaultLabel}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleSessionOverride(sessionNumber)}
+                            className="text-xs text-blue-600 underline underline-offset-2 hover:text-blue-800"
+                          >
+                            Clear override
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label
+                              htmlFor={`session-${sessionNumber}-override-starts-at`}
+                              className="text-xs"
+                            >
+                              Date & Time
+                            </Label>
+                            <Input
+                              id={`session-${sessionNumber}-override-starts-at`}
+                              data-testid={`session-${sessionNumber}-override-starts-at`}
+                              type="datetime-local"
+                              value={override?.startsAt ?? ''}
+                              onChange={(e) =>
+                                updateSessionOverride(sessionNumber, 'startsAt', e.target.value)
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label
+                              htmlFor={`session-${sessionNumber}-override-location`}
+                              className="text-xs"
+                            >
+                              Location
+                            </Label>
+                            <Input
+                              id={`session-${sessionNumber}-override-location`}
+                              data-testid={`session-${sessionNumber}-override-location`}
+                              type="text"
+                              placeholder={location || 'Same as default'}
+                              value={override?.location ?? ''}
+                              onChange={(e) =>
+                                updateSessionOverride(sessionNumber, 'location', e.target.value)
+                              }
+                            />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">Session {sessionNumber}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{defaultLabel}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleSessionOverride(sessionNumber)}
+                          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                        >
+                          Override
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-2">
           <Button asChild variant="outline">
