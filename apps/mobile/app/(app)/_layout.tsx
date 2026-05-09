@@ -19,6 +19,7 @@ export default function AppLayout() {
 
   return (
     <Stack>
+      <Stack.Screen name="index" options={{ title: 'Dashboard' }} />
       <Stack.Screen name="classes/index" options={{ title: 'Classes' }} />
       <Stack.Screen name="classes/[id]" options={{ title: 'Class Detail' }} />
     </Stack>
