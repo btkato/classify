@@ -83,20 +83,19 @@ describe('updateProfile', () => {
     )
   })
 
-  it('does not allow updating dateOfBirth', async () => {
+  it('allows updating dateOfBirth', async () => {
     const dob = new Date('1990-01-01')
-    mockUpdate.mockResolvedValue(mockUser as never)
+    const updated = { ...mockUser, dateOfBirth: dob }
+    mockUpdate.mockResolvedValue(updated as never)
 
-    await updateProfile('user_123', { firstName: 'Brandon', dateOfBirth: dob } as never)
+    const result = await updateProfile('user_123', { dateOfBirth: dob })
 
+    expect(result).toEqual(updated)
     expect(mockUpdate).toHaveBeenCalledWith({
       where: { id: 'user_123' },
-      data: { firstName: 'Brandon', lastName: undefined, phone: undefined },
+      data: { firstName: undefined, lastName: undefined, phone: undefined, dateOfBirth: dob },
       include: { roles: true },
     })
-    expect(mockUpdate).not.toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ dateOfBirth: dob }) })
-    )
   })
 })
 
