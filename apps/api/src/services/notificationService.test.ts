@@ -235,6 +235,17 @@ describe('processNotificationJobs', () => {
     expect(mockSendPushNotificationsAsync).not.toHaveBeenCalled()
   })
 
+  it('does not throw when sendPushNotificationsAsync fails', async () => {
+    const jobWithToken = {
+      ...baseJob,
+      user: { ...baseJob.user, pushToken: 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]' },
+    }
+    mockJobFindMany.mockResolvedValue([jobWithToken] as never)
+    mockSendPushNotificationsAsync.mockRejectedValue(new Error('Network error'))
+
+    await expect(processNotificationJobs()).resolves.toBeUndefined()
+  })
+
   it('does not overwrite SENT status when an error occurs after the transaction commits', async () => {
     mockJobFindMany.mockResolvedValue([baseJob] as never)
     vi.mocked(getIo).mockImplementationOnce(() => {
