@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router'
+import { useLocalSearchParams, router } from 'expo-router'
 import {
   ActivityIndicator,
   Alert,
@@ -125,6 +125,20 @@ export default function ClassDetailScreen() {
           <Text style={styles.metaLabel}>About</Text>
           <Text style={styles.description}>{classDetail.description}</Text>
         </View>
+      )}
+
+      {classDetail.lessonSetId !== null && (
+        <Pressable
+          style={styles.seriesLink}
+          onPress={() =>
+            router.push({
+              pathname: '/(app)/lesson-sets/[id]',
+              params: { id: classDetail.lessonSetId ?? '' },
+            })
+          }
+        >
+          <Text style={styles.seriesLinkText}>View Full Series →</Text>
+        </Pressable>
       )}
 
       <View style={styles.actionBlock}>
@@ -282,5 +296,12 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: '#dc2626',
+  },
+  seriesLink: {
+    marginBottom: 16,
+  },
+  seriesLinkText: {
+    fontSize: 14,
+    color: '#6b7280',
   },
 })

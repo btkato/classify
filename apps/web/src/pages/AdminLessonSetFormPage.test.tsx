@@ -136,7 +136,7 @@ describe('AdminLessonSetFormPage', () => {
     fireEvent.change(screen.getByLabelText('First Session Date & Time'), { target: { value: '2026-06-01T10:00' } })
     fireEvent.change(screen.getByLabelText('Interval (days)'), { target: { value: '7' } })
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Override' })[0])
+    await userEvent.click(screen.getAllByRole('button', { name: 'Override' })[0] as HTMLElement)
 
     expect(screen.getByRole('button', { name: 'Clear override' })).toBeInTheDocument()
     expect(screen.getByTestId('session-1-override-starts-at')).toBeInTheDocument()
@@ -149,7 +149,7 @@ describe('AdminLessonSetFormPage', () => {
     fireEvent.change(screen.getByLabelText('First Session Date & Time'), { target: { value: '2026-06-01T10:00' } })
     fireEvent.change(screen.getByLabelText('Interval (days)'), { target: { value: '7' } })
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Override' })[0])
+    await userEvent.click(screen.getAllByRole('button', { name: 'Override' })[0] as HTMLElement)
     await userEvent.click(screen.getByRole('button', { name: 'Clear override' }))
 
     expect(screen.queryByRole('button', { name: 'Clear override' })).not.toBeInTheDocument()
@@ -161,7 +161,7 @@ describe('AdminLessonSetFormPage', () => {
     await fillRequiredFields()
     fireEvent.change(screen.getByLabelText('First Session Date & Time'), { target: { value: '2026-06-01T10:00' } })
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Override' })[0])
+    await userEvent.click(screen.getAllByRole('button', { name: 'Override' })[0] as HTMLElement)
     fireEvent.change(screen.getByTestId('session-1-override-location'), { target: { value: 'Studio B' } })
 
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
