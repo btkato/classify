@@ -14,6 +14,8 @@ import { announcementsRouter } from './routes/announcements.js'
 import { messagesRouter } from './routes/messages.js'
 import { membershipPlansRouter } from './routes/membershipPlans.js'
 import { notificationTriggersRouter } from './routes/notificationTriggers.js'
+import { certificationsRouter } from './routes/certifications.js'
+import { instructorRouter } from './routes/instructor.js'
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [
   'http://localhost:5173',
@@ -44,5 +46,7 @@ app.use('/announcements', announcementsRouter)
 app.use('/messages', messagesRouter)
 app.use('/membership-plans', membershipPlansRouter)
 app.use('/notification-triggers', notificationTriggersRouter)
+app.use('/certifications', certificationsRouter)
+app.use('/instructor', instructorRouter)
 
 app.use(errorHandler)
