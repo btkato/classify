@@ -71,7 +71,19 @@ export default function MembershipsPage() {
     },
   })
 
-  const activeMemberships = (memberships ?? []).filter((m) => m.status === 'ACTIVE')
+  const resumeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const token = await getToken()
+      return apiFetch(`/memberships/${id}/resume`, token ?? undefined, { method: 'PATCH' })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['memberships'] })
+    },
+  })
+
+  const currentMemberships = (memberships ?? []).filter(
+    (m) => m.status === 'ACTIVE' || m.status === 'PAUSED'
+  )
 
   const historyData = history?.data ?? []
   const historyTotal = history?.total ?? 0
@@ -90,7 +102,7 @@ export default function MembershipsPage() {
 
       <section className="mt-8">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Active
+          Current
         </h2>
 
         {memsLoading ? (
@@ -98,16 +110,16 @@ export default function MembershipsPage() {
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
           </div>
-        ) : activeMemberships.length === 0 ? (
+        ) : currentMemberships.length === 0 ? (
           <div>
-            <p className="text-sm text-muted-foreground">No active memberships.</p>
+            <p className="text-sm text-muted-foreground">No current memberships.</p>
             <Button asChild className="mt-3">
               <Link to="/memberships/purchase">Purchase a Membership</Link>
             </Button>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {activeMemberships.map((membership) => {
+            {currentMemberships.map((membership) => {
               if (confirmingCancelId === membership.id) {
                 return (
                   <div
@@ -155,19 +167,34 @@ export default function MembershipsPage() {
                       <p className="font-medium text-sm">{formatMembershipType(membership.type)}</p>
                       <p className="mt-0.5 text-sm text-muted-foreground">
                         {formatMembershipDetail(membership)}
-                        {membership.type === 'CONTINUOUS_MONTHLY' ? ' · Auto-renews' : ''}
+                        {membership.type === 'CONTINUOUS_MONTHLY' && membership.status === 'ACTIVE'
+                          ? ' · Auto-renews'
+                          : ''}
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <Badge variant="secondary">Active</Badge>
-                      {membership.type === 'CONTINUOUS_MONTHLY' && (
-                        <button
-                          onClick={() => setConfirmingCancelId(membership.id)}
-                          className="text-sm font-medium text-destructive hover:opacity-75"
+                      <Badge variant={membership.status === 'ACTIVE' ? 'secondary' : 'outline'}>
+                        {formatStatusBadge(membership.status)}
+                      </Badge>
+                      {membership.type === 'CONTINUOUS_MONTHLY' && membership.status === 'PAUSED' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={resumeMutation.isPending}
+                          onClick={() => resumeMutation.mutate(membership.id)}
                         >
-                          Cancel
-                        </button>
+                          Resume
+                        </Button>
                       )}
+                      {membership.type === 'CONTINUOUS_MONTHLY' &&
+                        (membership.status === 'ACTIVE' || membership.status === 'PAUSED') && (
+                          <button
+                            onClick={() => setConfirmingCancelId(membership.id)}
+                            className="text-sm font-medium text-destructive hover:opacity-75"
+                          >
+                            Cancel
+                          </button>
+                        )}
                     </div>
                   </CardContent>
                 </Card>
