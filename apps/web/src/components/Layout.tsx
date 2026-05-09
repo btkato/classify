@@ -4,6 +4,7 @@ import Navbar from './Navbar'
 import { Skeleton } from './ui/skeleton'
 import { useSocket } from '../hooks/useSocket'
 import { useSessionExpiry } from '../hooks/useSessionExpiry'
+import { useProfileGuard } from '../hooks/useProfileGuard'
 
 function PageSkeleton() {
   return (
@@ -20,6 +21,7 @@ function PageSkeleton() {
 export default function Layout() {
   useSocket()
   useSessionExpiry()
+  useProfileGuard()
 
   return (
     <div className="min-h-screen bg-background text-foreground">
