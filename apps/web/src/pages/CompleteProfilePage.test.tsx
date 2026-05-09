@@ -30,6 +30,18 @@ const mockCompleteUser = {
   dateOfBirth: '1990-01-15T00:00:00.000Z',
 }
 
+const mockPhoneSetUser = {
+  ...mockCurrentUser,
+  phone: '5551234567',
+  dateOfBirth: null,
+}
+
+const mockDateOfBirthSetUser = {
+  ...mockCurrentUser,
+  phone: null,
+  dateOfBirth: '1990-01-15T00:00:00.000Z',
+}
+
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
@@ -111,5 +123,51 @@ describe('CompleteProfilePage', () => {
     renderPage()
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
+  })
+
+  it('shows only the date of birth field when phone is already set', () => {
+    mockUseCurrentUser.mockReturnValue({ data: mockPhoneSetUser } as never)
+
+    renderPage()
+
+    expect(screen.queryByLabelText('Phone number')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Date of birth')).toBeInTheDocument()
+  })
+
+  it('shows only the phone field when date of birth is already set', () => {
+    mockUseCurrentUser.mockReturnValue({ data: mockDateOfBirthSetUser } as never)
+
+    renderPage()
+
+    expect(screen.getByLabelText('Phone number')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Date of birth')).not.toBeInTheDocument()
+  })
+
+  it('submits only dateOfBirth when phone is already set', async () => {
+    mockUseCurrentUser.mockReturnValue({ data: mockPhoneSetUser } as never)
+
+    renderPage()
+
+    fireEvent.change(screen.getByLabelText('Date of birth'), { target: { value: '1990-01-15' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Save and continue' }))
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      { userId: 'user_1', dateOfBirth: '1990-01-15' },
+      expect.any(Object)
+    )
+  })
+
+  it('submits only phone when date of birth is already set', async () => {
+    mockUseCurrentUser.mockReturnValue({ data: mockDateOfBirthSetUser } as never)
+
+    renderPage()
+
+    await userEvent.type(screen.getByLabelText('Phone number'), '5551234567')
+    await userEvent.click(screen.getByRole('button', { name: 'Save and continue' }))
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      { userId: 'user_1', phone: '5551234567' },
+      expect.any(Object)
+    )
   })
 })

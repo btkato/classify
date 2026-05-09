@@ -30,7 +30,6 @@ import {
   CommandList,
 } from '../components/ui/command'
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24
 
 interface SessionOverrideState {
   startsAt: string
@@ -335,10 +334,8 @@ export default function AdminLessonSetFormPage() {
             <div className="divide-y overflow-hidden rounded-xl border">
               {Array.from({ length: parsedTotalSessions }, (_, index) => {
                 const sessionNumber = index + 1
-                const sessionDate = new Date(
-                  new Date(firstSessionStartsAt).getTime() +
-                    index * parsedIntervalDays * MS_PER_DAY
-                )
+                const sessionDate = new Date(firstSessionStartsAt)
+                sessionDate.setDate(sessionDate.getDate() + index * parsedIntervalDays)
                 const isExpanded = expandedSessions.has(sessionNumber)
                 const override = sessionOverrides[sessionNumber]
                 const dateLabel = sessionDate.toLocaleString(undefined, {

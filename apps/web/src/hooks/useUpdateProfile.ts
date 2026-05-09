@@ -5,8 +5,8 @@ import type { CurrentUser } from '../lib/types'
 
 interface UpdateProfileInput {
   userId: string
-  phone: string
-  dateOfBirth: string
+  phone?: string
+  dateOfBirth?: string
 }
 
 export function useUpdateProfile() {
@@ -18,7 +18,10 @@ export function useUpdateProfile() {
       const token = await getToken()
       return apiFetch<CurrentUser>(`/users/${userId}`, token ?? undefined, {
         method: 'PATCH',
-        body: JSON.stringify({ phone, dateOfBirth }),
+        body: JSON.stringify({
+          ...(phone !== undefined && { phone }),
+          ...(dateOfBirth !== undefined && { dateOfBirth }),
+        }),
       })
     },
     onSuccess: (updatedUser) => {

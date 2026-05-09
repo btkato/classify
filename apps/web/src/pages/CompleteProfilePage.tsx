@@ -16,7 +16,10 @@ export default function CompleteProfilePage() {
   const [phoneError, setPhoneError] = useState('')
   const [dateOfBirthError, setDateOfBirthError] = useState('')
 
-  if (currentUser?.phone && currentUser.dateOfBirth) {
+  const phoneIsMissing = currentUser?.phone === null
+  const dateOfBirthIsMissing = currentUser?.dateOfBirth === null
+
+  if (currentUser && !phoneIsMissing && !dateOfBirthIsMissing) {
     return <Navigate to="/dashboard" replace />
   }
 
@@ -27,11 +30,11 @@ export default function CompleteProfilePage() {
     setPhoneError('')
     setDateOfBirthError('')
 
-    if (!phone.trim()) {
+    if (phoneIsMissing && !phone.trim()) {
       setPhoneError('Phone number is required')
       valid = false
     }
-    if (!dateOfBirth) {
+    if (dateOfBirthIsMissing && !dateOfBirth) {
       setDateOfBirthError('Date of birth is required')
       valid = false
     }
@@ -39,7 +42,11 @@ export default function CompleteProfilePage() {
     if (!valid || !currentUser) return
 
     updateProfile(
-      { userId: currentUser.id, phone: phone.trim(), dateOfBirth },
+      {
+        userId: currentUser.id,
+        ...(phoneIsMissing && { phone: phone.trim() }),
+        ...(dateOfBirthIsMissing && { dateOfBirth }),
+      },
       { onSuccess: () => void navigate('/dashboard', { replace: true }) }
     )
   }
@@ -55,28 +62,32 @@ export default function CompleteProfilePage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 rounded-xl border bg-card p-6">
-          <div className="space-y-1.5">
-            <Label htmlFor="phone">Phone number</Label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="(555) 000-0000"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-            {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
-          </div>
+          {phoneIsMissing && (
+            <div className="space-y-1.5">
+              <Label htmlFor="phone">Phone number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="(555) 000-0000"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+              {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
+            </div>
+          )}
 
-          <div className="space-y-1.5">
-            <Label htmlFor="dateOfBirth">Date of birth</Label>
-            <Input
-              id="dateOfBirth"
-              type="date"
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
-            />
-            {dateOfBirthError && <p className="text-xs text-destructive">{dateOfBirthError}</p>}
-          </div>
+          {dateOfBirthIsMissing && (
+            <div className="space-y-1.5">
+              <Label htmlFor="dateOfBirth">Date of birth</Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+              />
+              {dateOfBirthError && <p className="text-xs text-destructive">{dateOfBirthError}</p>}
+            </div>
+          )}
 
           <Button type="submit" className="w-full" disabled={isPending}>
             Save and continue

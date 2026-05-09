@@ -41,7 +41,11 @@ export async function processNotificationJobs(): Promise<void> {
   if (pushMessages.length > 0) {
     const chunks = expo.chunkPushNotifications(pushMessages)
     for (const chunk of chunks) {
-      await expo.sendPushNotificationsAsync(chunk)
+      try {
+        await expo.sendPushNotificationsAsync(chunk)
+      } catch {
+        // Jobs are already SENT in the DB — don't fail the poll over a push delivery error
+      }
     }
   }
 }
