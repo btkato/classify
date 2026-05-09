@@ -1,6 +1,7 @@
 import './env.js'
 import http from 'http'
 import { app } from './app.js'
+import { env } from './env.js'
 import { initSocket } from './lib/socket.js'
 import { notificationQueue } from './lib/queue.js'
 import { startNotificationWorker } from './workers/notificationWorker.js'
@@ -12,10 +13,10 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [
 ]
 
 const httpServer = http.createServer(app)
-const io = initSocket(httpServer, allowedOrigins)
+const io = initSocket(httpServer, allowedOrigins, env.CLERK_SECRET_KEY)
 
 io.on('connection', (socket) => {
-  const userId = socket.handshake.auth['userId']
+  const userId: unknown = socket.data.userId
   if (typeof userId === 'string' && userId.length > 0) {
     socket.join(`user:${userId}`)
   }

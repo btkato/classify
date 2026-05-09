@@ -7,13 +7,15 @@ const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export function useSocket() {
   const queryClient = useQueryClient()
-  const { userId, isSignedIn } = useAuth()
+  const { isSignedIn, getToken } = useAuth()
 
   useEffect(() => {
-    if (!isSignedIn || !userId) return
+    if (!isSignedIn) return
 
     const socket = io(API_BASE, {
-      auth: { userId },
+      auth: (callback: (data: { token: string }) => void) => {
+        void getToken().then((token) => callback({ token: token ?? '' }))
+      },
     })
 
     function handleNewMessage({ threadId }: { threadId: string }) {
@@ -27,5 +29,5 @@ export function useSocket() {
       socket.off('new-message', handleNewMessage)
       socket.disconnect()
     }
-  }, [isSignedIn, userId, queryClient])
+  }, [isSignedIn, getToken, queryClient])
 }

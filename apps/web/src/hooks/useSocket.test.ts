@@ -30,26 +30,26 @@ beforeEach(() => {
 
 describe('useSocket', () => {
   it('does not connect when user is not signed in', () => {
-    vi.mocked(useAuth).mockReturnValue({ isSignedIn: false, userId: null } as never)
+    vi.mocked(useAuth).mockReturnValue({ isSignedIn: false, getToken: vi.fn() } as never)
 
     renderHook(() => useSocket())
 
     expect(mockIo).not.toHaveBeenCalled()
   })
 
-  it('connects and registers new-message handler when signed in', () => {
-    vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, userId: 'user_1' } as never)
+  it('connects with an auth callback and registers new-message handler when signed in', () => {
+    vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, getToken: vi.fn().mockResolvedValue('tok') } as never)
 
     renderHook(() => useSocket())
 
-    expect(mockIo).toHaveBeenCalledWith(expect.any(String), { auth: { userId: 'user_1' } })
+    expect(mockIo).toHaveBeenCalledWith(expect.any(String), { auth: expect.any(Function) })
     expect(mockOn).toHaveBeenCalledWith('new-message', expect.any(Function))
   })
 
   it('invalidates inbox and thread queries when new-message is received', () => {
     const mockInvalidateQueries = vi.fn()
     vi.mocked(useQueryClient).mockReturnValue({ invalidateQueries: mockInvalidateQueries } as never)
-    vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, userId: 'user_1' } as never)
+    vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, getToken: vi.fn().mockResolvedValue('tok') } as never)
 
     renderHook(() => useSocket())
 
@@ -61,7 +61,7 @@ describe('useSocket', () => {
   })
 
   it('removes the handler and disconnects on unmount', () => {
-    vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, userId: 'user_1' } as never)
+    vi.mocked(useAuth).mockReturnValue({ isSignedIn: true, getToken: vi.fn().mockResolvedValue('tok') } as never)
 
     const { unmount } = renderHook(() => useSocket())
     unmount()
