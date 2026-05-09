@@ -4,6 +4,7 @@ export interface Class {
   description: string | null
   categoryId: string
   instructorId: string
+  lessonSetId: string | null
   capacity: number
   enrolledCount: number
   startsAt: string
@@ -12,6 +13,23 @@ export interface Class {
   status: string
   classNumber: number
   sessionNumber: number | null
+}
+
+export interface LessonSet {
+  id: string
+  title: string
+  description: string | null
+  enrollmentType: string
+  totalSessions: number
+  instructorId: string
+  categoryId: string
+  status: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface LessonSetWithClasses extends LessonSet {
+  classes: Class[]
 }
 
 export interface ClassPage {
