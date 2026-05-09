@@ -216,4 +216,25 @@ describe('ClassDetailPage', () => {
 
     expect(screen.queryByText('Morning Yoga Flow')).not.toBeInTheDocument()
   })
+
+  it('shows "View Full Series" link when the class belongs to a lesson set', () => {
+    mockUseAuth.mockReturnValue({ isSignedIn: false } as never)
+    mockUseClass.mockReturnValue({
+      data: { ...mockClass, lessonSetId: 'ls_1' },
+      isLoading: false,
+    } as never)
+
+    renderPage()
+
+    expect(screen.getByRole('link', { name: /view full series/i })).toBeInTheDocument()
+  })
+
+  it('does not show "View Full Series" link for a standalone class', () => {
+    mockUseAuth.mockReturnValue({ isSignedIn: false } as never)
+    mockUseClass.mockReturnValue({ data: mockClass, isLoading: false } as never)
+
+    renderPage()
+
+    expect(screen.queryByRole('link', { name: /view full series/i })).not.toBeInTheDocument()
+  })
 })
