@@ -27,7 +27,7 @@ export default function SignInScreen() {
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId })
       } else {
-        setError('Sign in incomplete — check your credentials.')
+        setError(`Sign in requires additional steps (status: ${result.status}).`)
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Sign in failed.'
