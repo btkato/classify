@@ -1,4 +1,15 @@
+import * as Notifications from 'expo-notifications'
 import { ClerkProvider, useAuth } from '@clerk/clerk-expo'
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+})
 import * as SecureStore from 'expo-secure-store'
 import { Slot, useRouter, useSegments } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
