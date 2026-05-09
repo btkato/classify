@@ -1,6 +1,10 @@
+import { Expo } from 'expo-server-sdk'
+import type { ExpoPushMessage } from 'expo-server-sdk'
 import { prisma } from '../lib/prisma.js'
 import { getIo } from '../lib/socket.js'
 import type { Prisma, NotificationStatus } from 'db'
+
+const expo = new Expo()
 
 type NotificationJobWithRelations = Prisma.NotificationJobGetPayload<{
   include: { trigger: true; user: true; membership: true }
@@ -18,9 +22,14 @@ export async function processNotificationJobs(): Promise<void> {
     include: { trigger: true, user: true, membership: true },
   })
 
+  const pushMessages: ExpoPushMessage[] = []
+
   for (const job of pendingJobs) {
     try {
-      await processOneJob(job)
+      const pushMessage = await processOneJob(job)
+      if (pushMessage) {
+        pushMessages.push(pushMessage)
+      }
     } catch {
       await prisma.notificationJob.updateMany({
         where: { id: job.id, status: 'PENDING' },
@@ -28,9 +37,16 @@ export async function processNotificationJobs(): Promise<void> {
       })
     }
   }
+
+  if (pushMessages.length > 0) {
+    const chunks = expo.chunkPushNotifications(pushMessages)
+    for (const chunk of chunks) {
+      await expo.sendPushNotificationsAsync(chunk)
+    }
+  }
 }
 
-async function processOneJob(job: NotificationJobWithRelations): Promise<void> {
+async function processOneJob(job: NotificationJobWithRelations): Promise<ExpoPushMessage | null> {
   const senderId = job.trigger.createdByUserId
 
   const daysRemaining = job.membership?.expiresAt
@@ -101,7 +117,13 @@ async function processOneJob(job: NotificationJobWithRelations): Promise<void> {
     const io = getIo()
     io.to(`user:${result.senderId}`).emit('new-message', { threadId: result.threadId })
     io.to(`user:${job.userId}`).emit('new-message', { threadId: result.threadId })
+
+    if (job.user.pushToken && Expo.isExpoPushToken(job.user.pushToken)) {
+      return { to: job.user.pushToken, title: 'Classify', body, sound: 'default' }
+    }
   }
+
+  return null
 }
 
 type NotificationJobSummary = Prisma.NotificationJobGetPayload<{
