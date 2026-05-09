@@ -145,6 +145,15 @@ export default function ClassDetailPage() {
           </span>
         </div>
 
+        {classDetail.lessonSetId && (
+          <Link
+            to={`/classes/lesson-sets/${classDetail.lessonSetId}`}
+            className="mt-6 inline-block text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← View Full Series
+          </Link>
+        )}
+
         <Card className="mt-8">
           <CardContent className="pt-6">{renderEnrollmentButton(classDetail)}</CardContent>
         </Card>

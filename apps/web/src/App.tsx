@@ -19,6 +19,7 @@ function NotFoundPage() {
 
 const ClassListPage = lazy(() => import('./pages/ClassListPage'))
 const ClassDetailPage = lazy(() => import('./pages/ClassDetailPage'))
+const LessonSetDetailPage = lazy(() => import('./pages/LessonSetDetailPage'))
 const StudentDashboard = lazy(() => import('./pages/StudentDashboard'))
 const MyRegistrationsPage = lazy(() => import('./pages/MyRegistrationsPage'))
 const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
@@ -58,6 +59,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<ClassListPage />} />
           <Route path="/classes" element={<ClassListPage />} />
+          <Route path="/classes/lesson-sets/:id" element={<LessonSetDetailPage />} />
           <Route path="/classes/:id" element={<ClassDetailPage />} />
 
           <Route path="/sign-in/*" element={<SignInPage />} />
