@@ -36,7 +36,7 @@ function AuthGuard() {
     if (!isSignedIn && inApp) {
       router.replace('/sign-in')
     } else if (isSignedIn && !inApp) {
-      router.replace('/(app)/classes')
+      router.replace('/(app)/')
     }
   }, [isLoaded, isSignedIn, segments, router])
 
