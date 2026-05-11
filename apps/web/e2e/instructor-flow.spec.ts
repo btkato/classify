@@ -68,6 +68,6 @@ test('instructor can update class description and changes persist', async ({ asI
 
 test('instructor can view the class roster', async ({ asInstructor }) => {
   await asInstructor.goto(`/instructor/classes/${classId}/roster`)
-  await expect(asInstructor.getByText('E2E Student')).toBeVisible()
-  await expect(asInstructor.getByText('e2e-student@classify.test')).toBeVisible()
+  await expect(asInstructor.getByText('Student Tester')).toBeVisible()
+  await expect(asInstructor.getByText('studenttester@classify.com')).toBeVisible()
 })
