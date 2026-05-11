@@ -27,7 +27,7 @@ export default defineConfig({
       reuseExistingServer: !process.env['CI'],
     },
     {
-      command: 'vite preview',
+      command: 'vite preview --port 4173 --strictPort',
       port: 4173,
       reuseExistingServer: !process.env['CI'],
     },

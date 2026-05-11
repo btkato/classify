@@ -15,7 +15,7 @@ import type { Class, RegistrationWithClass } from '../lib/types'
 interface DropInSessionRowProps {
   session: Class
   myRegistrations: RegistrationWithClass[]
-  onEnrollError: () => void
+  onEnrollError: (error: Error) => void
 }
 
 function DropInSessionRow({ session, myRegistrations, onEnrollError }: DropInSessionRowProps) {
@@ -62,7 +62,7 @@ function DropInSessionRow({ session, myRegistrations, onEnrollError }: DropInSes
       )
     }
     return (
-      <Button size="sm" onClick={() => enroll(undefined, { onError: onEnrollError })}>
+      <Button size="sm" onClick={() => enroll(undefined, { onError: (error: Error) => onEnrollError(error) })}>
         Enroll
       </Button>
     )
@@ -173,7 +173,9 @@ export default function LessonSetDetailPage() {
     }
 
     return (
-      <Button className="w-full" onClick={() => enrollInLessonSet(undefined, { onError: () => navigate('/memberships/purchase') })}>
+      <Button className="w-full" onClick={() => enrollInLessonSet(undefined, { onError: (error: Error) => {
+        if (error.message.includes('No valid membership')) navigate('/memberships/purchase')
+      }})}>
         Enroll in Full Series
       </Button>
     )
@@ -237,7 +239,9 @@ export default function LessonSetDetailPage() {
                   key={session.id}
                   session={session}
                   myRegistrations={myRegistrations ?? []}
-                  onEnrollError={() => navigate('/memberships/purchase')}
+                  onEnrollError={(error: Error) => {
+                    if (error.message.includes('No valid membership')) navigate('/memberships/purchase')
+                  }}
                 />
               )
             }

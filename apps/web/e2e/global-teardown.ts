@@ -1,7 +1,9 @@
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { config } from 'dotenv'
 
-config({ path: path.resolve(process.cwd(), '../api/.env') })
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+config({ path: path.resolve(__dirname, '../../api/.env') })
 
 export default async function globalTeardown() {
   const { prisma } = await import('db')
@@ -20,7 +22,11 @@ export default async function globalTeardown() {
     await prisma.registration.findMany({ where: { userId: { in: clerkIds } }, select: { id: true } })
   ).map((registration) => registration.id)
 
+  // Delete in FK dependency order. Spec afterAlls handle Class/LessonSet cleanup;
+  // these cover records that outlive individual specs.
   await prisma.notificationJob.deleteMany({ where: { userId: { in: clerkIds } } })
+  await prisma.notificationTrigger.deleteMany({ where: { createdByUserId: { in: clerkIds } } })
+  await prisma.announcement.deleteMany({ where: { instructorId: { in: clerkIds } } })
   await prisma.message.deleteMany({ where: { senderId: { in: clerkIds } } })
   await prisma.threadParticipant.deleteMany({ where: { userId: { in: clerkIds } } })
   await prisma.membershipTransaction.deleteMany({

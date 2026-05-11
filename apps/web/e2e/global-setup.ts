@@ -1,10 +1,12 @@
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { config } from 'dotenv'
 import { clerkSetup } from '@clerk/testing/playwright'
 
-// Load API env vars (DATABASE_URL, CLERK_SECRET_KEY, etc.) before anything else.
+// Resolve relative to this file so the path is stable regardless of where Playwright is invoked from.
 // clerkSetup also auto-loads apps/web/.env[.local] for VITE_CLERK_PUBLISHABLE_KEY.
-config({ path: path.resolve(process.cwd(), '../api/.env') })
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+config({ path: path.resolve(__dirname, '../../api/.env') })
 
 export default async function globalSetup() {
   await clerkSetup()
