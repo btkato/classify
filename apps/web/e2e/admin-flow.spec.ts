@@ -71,7 +71,7 @@ test('student with instructor role can access instructor pages', async ({ asStud
 
 test('admin can cancel a membership from the admin panel', async ({ asAdmin }) => {
   await asAdmin.goto('/admin/memberships')
-  await asAdmin.getByPlaceholder('Search by name or email…').fill('e2e-student@classify.test')
+  await asAdmin.getByPlaceholder('Search by name or email…').fill('studenttester@classify.com')
   await expect(asAdmin.getByTestId(`cancel-${membershipId}`)).toBeVisible()
   await asAdmin.getByTestId(`cancel-${membershipId}`).click()
   await asAdmin.getByRole('button', { name: 'Cancel membership' }).click()
