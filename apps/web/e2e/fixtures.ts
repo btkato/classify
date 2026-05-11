@@ -11,19 +11,28 @@ export const test = base.extend<{
   asInstructor: Page
   asAdmin: Page
 }>({
-  asStudent: async ({ page }, use) => {
+  asStudent: async ({ browser }, use) => {
+    const context = await browser.newContext()
+    const page = await context.newPage()
     await signInAs(page, 'e2e-student@classify.test')
     await use(page)
+    await context.close()
   },
 
-  asInstructor: async ({ page }, use) => {
+  asInstructor: async ({ browser }, use) => {
+    const context = await browser.newContext()
+    const page = await context.newPage()
     await signInAs(page, 'e2e-instructor@classify.test')
     await use(page)
+    await context.close()
   },
 
-  asAdmin: async ({ page }, use) => {
+  asAdmin: async ({ browser }, use) => {
+    const context = await browser.newContext()
+    const page = await context.newPage()
     await signInAs(page, 'e2e-admin@classify.test')
     await use(page)
+    await context.close()
   },
 })
 
