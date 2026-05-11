@@ -103,14 +103,14 @@ export default function ClassDetailPage() {
 
     if (isFull) {
       return (
-        <Button variant="outline" className="w-full" onClick={() => enroll()}>
+        <Button variant="outline" className="w-full" onClick={() => enroll(undefined, { onError: () => navigate('/memberships/purchase') })}>
           Join Waitlist
         </Button>
       )
     }
 
     return (
-      <Button className="w-full" onClick={() => enroll()}>
+      <Button className="w-full" onClick={() => enroll(undefined, { onError: () => navigate('/memberships/purchase') })}>
         Enroll
       </Button>
     )

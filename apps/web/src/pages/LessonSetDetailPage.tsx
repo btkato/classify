@@ -15,9 +15,10 @@ import type { Class, RegistrationWithClass } from '../lib/types'
 interface DropInSessionRowProps {
   session: Class
   myRegistrations: RegistrationWithClass[]
+  onEnrollError: () => void
 }
 
-function DropInSessionRow({ session, myRegistrations }: DropInSessionRowProps) {
+function DropInSessionRow({ session, myRegistrations, onEnrollError }: DropInSessionRowProps) {
   const { mutate: enroll } = useEnroll(session.id)
   const { mutate: cancelRegistration } = useCancelRegistration()
 
@@ -61,7 +62,7 @@ function DropInSessionRow({ session, myRegistrations }: DropInSessionRowProps) {
       )
     }
     return (
-      <Button size="sm" onClick={() => enroll()}>
+      <Button size="sm" onClick={() => enroll(undefined, { onError: onEnrollError })}>
         Enroll
       </Button>
     )
@@ -172,7 +173,7 @@ export default function LessonSetDetailPage() {
     }
 
     return (
-      <Button className="w-full" onClick={() => enrollInLessonSet()}>
+      <Button className="w-full" onClick={() => enrollInLessonSet(undefined, { onError: () => navigate('/memberships/purchase') })}>
         Enroll in Full Series
       </Button>
     )
@@ -236,6 +237,7 @@ export default function LessonSetDetailPage() {
                   key={session.id}
                   session={session}
                   myRegistrations={myRegistrations ?? []}
+                  onEnrollError={() => navigate('/memberships/purchase')}
                 />
               )
             }
