@@ -101,16 +101,22 @@ export default function ClassDetailPage() {
       )
     }
 
+    const handleEnrollError = (error: Error) => {
+      if (error.message.includes('No valid membership')) {
+        navigate('/memberships/purchase')
+      }
+    }
+
     if (isFull) {
       return (
-        <Button variant="outline" className="w-full" onClick={() => enroll(undefined, { onError: () => navigate('/memberships/purchase') })}>
+        <Button variant="outline" className="w-full" onClick={() => enroll(undefined, { onError: handleEnrollError })}>
           Join Waitlist
         </Button>
       )
     }
 
     return (
-      <Button className="w-full" onClick={() => enroll(undefined, { onError: () => navigate('/memberships/purchase') })}>
+      <Button className="w-full" onClick={() => enroll(undefined, { onError: handleEnrollError })}>
         Enroll
       </Button>
     )
